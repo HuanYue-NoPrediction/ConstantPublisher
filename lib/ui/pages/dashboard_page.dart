@@ -25,9 +25,13 @@ class DashboardPage extends StatelessWidget {
         // 环境状态卡
         SectionCard(
           title: state.steamReady ? '发布环境就绪' : '发布环境未配置',
-          subtitle: state.steamReady
-              ? '${state.steamUser} · steamcmd 已找到 · 凭据依赖本机缓存'
-              : '到设置页配置 steamcmd 路径与 Steam 账号',
+          subtitle: state.engine == 'steamworks'
+              ? (state.steamReady
+                  ? 'Steamworks 引擎 · 开着 Steam 即可发布,免账号免密码'
+                  : '未找到 Steamworks 助手 —— 请使用完整发行包,或到设置页切换引擎')
+              : (state.steamReady
+                  ? '${state.steamUser} · steamcmd 已找到 · 凭据依赖本机缓存'
+                  : '到设置页配置 steamcmd 路径与 Steam 账号'),
           trailing: Icon(
             state.steamReady ? Icons.check_circle : Icons.error_outline,
             color: state.steamReady ? sem.success : scheme.error,

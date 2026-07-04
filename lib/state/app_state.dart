@@ -1,11 +1,13 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/mod.dart';
 import '../services/stager.dart';
 import '../services/steamcmd.dart';
+import '../services/steamworks_engine.dart';
 import '../services/workshop_api.dart';
 
 enum LogLevel { info, warn, error }
@@ -26,6 +28,7 @@ class PublishProgress {
 
 class AppState extends ChangeNotifier {
   // ---------- 设置 ----------
+  String engine = 'steamworks'; // steamworks(默认,零配置)| steamcmd(CI/无桌面)
   String modsDir = '';
   String steamcmdPath = '';
   String steamUser = '';
@@ -49,6 +52,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> init() async {
     final sp = await SharedPreferences.getInstance();
+    engine = sp.getString('engine') ?? 'steamworks';
     modsDir = sp.getString('modsDir') ?? '';
     steamcmdPath = sp.getString('steamcmdPath') ?? '';
     steamUser = sp.getString('steamUser') ?? '';
@@ -83,6 +87,12 @@ class AppState extends ChangeNotifier {
   }
 
   // ---------- 设置修改 ----------
+  Future<void> setEngine(String e) async {
+    engine = e;
+    await _persist('engine', e);
+    notifyListeners();
+  }
+
   Future<void> setModsDir(String dir) async {
     modsDir = dir;
     await _persist('modsDir', dir);
@@ -122,10 +132,17 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool get steamReady =>
-      steamcmdPath.isNotEmpty &&
-      File(steamcmdPath).existsSync() &&
-      steamUser.isNotEmpty;
+  /// Steamworks 助手随发行包放在主程序旁的 helper/ 目录。
+  String get helperPath => p.join(
+      File(Platform.resolvedExecutable).parent.path,
+      'helper',
+      'CpSteamHelper.exe');
+
+  bool get steamReady => engine == 'steamworks'
+      ? File(helperPath).existsSync()
+      : (steamcmdPath.isNotEmpty &&
+          File(steamcmdPath).existsSync() &&
+          steamUser.isNotEmpty);
 
   // ---------- 模组 ----------
   Future<void> scanMods() async {
@@ -203,10 +220,15 @@ class AppState extends ChangeNotifier {
     required String description,
     required String changeNote,
     required int visibility,
+    required List<String> tags,
   }) async {
     if (busy) return false;
     if (!steamReady) {
-      log(LogLevel.error, '发布环境未就绪:检查 steamcmd 路径与账号(设置页)');
+      log(
+          LogLevel.error,
+          engine == 'steamworks'
+              ? '发布环境未就绪:未找到 Steamworks 助手(helper\\CpSteamHelper.exe),请使用完整发行包'
+              : '发布环境未就绪:检查 steamcmd 路径与账号(设置页)');
       return false;
     }
     busy = true;
@@ -249,8 +271,6 @@ class AppState extends ChangeNotifier {
         preview = mod.previewFile.path;
       }
 
-      final engine = SteamcmdEngine(
-          steamcmdPath: steamcmdPath, username: steamUser);
       final req = PublishRequest(
         appId: mod.pub.appId,
         publishedFileId: mod.pub.publishedFileId,
@@ -260,11 +280,16 @@ class AppState extends ChangeNotifier {
         description: description,
         changeNote: changeNote,
         visibility: visibility,
+        tags: tags,
       );
+      final Stream<PublishEvent> events = engine == 'steamworks'
+          ? SteamworksEngine(helperPath: helperPath).publish(req)
+          : SteamcmdEngine(steamcmdPath: steamcmdPath, username: steamUser)
+              .publish(req);
 
       String? newId;
       String? error;
-      await for (final ev in engine.publish(req)) {
+      await for (final ev in events) {
         if (ev.logLine != null) log(LogLevel.info, '[steamcmd] ${ev.logLine}');
         if (ev.stage != null) {
           progress = PublishProgress(ev.stage!, ev.progress ?? 0);
@@ -282,6 +307,7 @@ class AppState extends ChangeNotifier {
       }
       mod.pub.lastPublishedVersion = version;
       mod.pub.visibility = visibility;
+      mod.pub.tags = List.of(tags);
       await mod.savePub();
       log(LogLevel.info,
           '✔ 已发布 ${mod.info.name} v$version(条目 ${mod.pub.publishedFileId ?? '?'})· 更新记录已写入');

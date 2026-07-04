@@ -13,16 +13,25 @@
 | 依赖 Steam 返回的列表(2020 年崩溃根因) | 真相源是每个模组文件夹里的 `dstpub.json`,可进版本库 |
 | 换文件夹更新老条目很麻烦 | 工坊页手动绑定/换绑:任意条目 id ↔ 任意本地文件夹 |
 | EResult 裸报数字 | 错误码自动翻译成人话(见 `lib/models/eresult.dart`) |
-| 无法自动化 | 引擎层(steamcmd + VDF)与 UI 解耦,后续可加 CLI |
+| 无法自动化 | 双引擎:Steamworks(桌面默认)+ steamcmd(CI/无头环境) |
+
+## 最终用户怎么用(零配置)
+
+解压发行包 → **确保 Steam 客户端开着、账号拥有饥荒** → 双击 `constant_publisher.exe`。
+没了。默认的 **Steamworks 引擎**(`helper/CpSteamHelper.exe`)借用已登录的 Steam
+会话完成上传,与官方 ModUploader 同机制:不输账号、不输密码、不装 steamcmd。
+标签通过 `SetItemTags` 可靠写入,上传进度来自 `GetItemUpdateProgress` 真实字节数。
+提示:上传期间 Steam 可能显示"正在玩 Don't Starve Together",属正常现象(以游戏身份接入)。
 
 ## 架构(致敬 FlClash 的分层)
 
 ```
 UI(Flutter / Material 3, lib/ui)
   └── AppState(provider, lib/state)
-        ├── mod_store:扫描 mods 目录,解析 modinfo.lua,读写 dstpub.json
         ├── stager:忽略规则 → 干净暂存副本(dry-run 即预览此清单)
-        ├── steamcmd:生成 VDF → 调 steamcmd +workshop_build_item → 流式日志/进度
+        ├── steamworks_engine:调 helper/CpSteamHelper.exe(C# + Steamworks.NET)
+        │     └── 借用已登录 Steam 会话:CreateItem / SubmitItemUpdate / SetItemTags
+        ├── steamcmd:生成 VDF → steamcmd +workshop_build_item(CI/无头环境备用)
         ├── draft_store:表单草稿(SharedPreferences,按模组路径隔离)
         └── workshop_api:可选,Steam Web API 拉取名下条目做巡检
 ```
@@ -46,11 +55,14 @@ UI(Flutter / Material 3, lib/ui)
    flutter run -d windows          # 调试运行
    flutter build windows           # 发布构建,产物在 build\windows\x64\runner\Release
    ```
-4. **配置 steamcmd**(发布必需):
-   - 从 <https://developer.valvesoftware.com/wiki/SteamCMD> 下载,解压到如 `E:\SteamCMD`;
-   - 终端里跑一次 `steamcmd +login 你的账号`,输入密码和 Steam Guard 验证码(**只需一次**,凭据缓存在本机);
-   - 应用「设置」页填 steamcmd 路径与账号。
+4. **构建 Steamworks 助手**(需 .NET 8 SDK,`winget install Microsoft.DotNet.SDK.8`):
+   ```powershell
+   dotnet publish helper/CpSteamHelper.csproj -c Release -o build\windows\x64\runner\Release\helper
+   ```
+   (CI 已自动做这一步;本地开发跑 `flutter run` 前手动执行一次即可)
 5. **选 mods 目录**:「模组」页右下角,指向如 `...\steamapps\common\Don't Starve Together\mods`。
+6. (可选,仅 steamcmd 引擎)从 <https://developer.valvesoftware.com/wiki/SteamCMD> 下载 steamcmd,
+   终端跑一次 `steamcmd +login 你的账号` 过 Steam Guard,再到「设置」页填路径与账号。
 
 ## 关键约定
 
@@ -59,10 +71,10 @@ UI(Flutter / Material 3, lib/ui)
 - **首次发布**:留空 id → steamcmd `CreateItem` 后把新 id 写回 VDF,应用读回并存入 `dstpub.json`。
 - **新文件夹更新老条目**:工坊页「手动绑定/换绑」,输入条目 id、选文件夹即可;旧文件夹的绑定自动解除。
 
-## 已知限制(v0.1)
+## 已知限制(v0.2)
 
-- 标签走 steamcmd 在老版本上不可靠(2024-10 后支持 kvtags),必要时上传后在工坊网页补;后续可换 Steamworks SDK 原生路径(steamworks.js / Steamworks.NET 同理的 Dart FFI)。
-- Steam Guard 首次验证需在终端手动完成一次。
+- Steamworks 引擎要求账号**拥有目标游戏**(DST=322330 / DS=219740),且 Steam 客户端在运行。
+- steamcmd 引擎(备用)仍需终端过一次 Steam Guard;其标签写入在老版 steamcmd 上不可靠。
 - 「从 Steam 拉取名下条目」需要 Web API Key + SteamID64(设置页,可选)。
 - 尚未集成 ktech/autocompiler 的发布前重编译(计划为发布前检查项)。
 

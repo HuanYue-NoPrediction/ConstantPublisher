@@ -349,7 +349,7 @@ class _PublishPageState extends State<PublishPage> {
         const SizedBox(height: 14),
         SectionCard(
           title: '标签',
-          subtitle: '写入 dstpub.json;steamcmd 老版本设标签不可靠,必要时上传后在工坊网页补',
+          subtitle: 'Steamworks 引擎走 SetItemTags,可靠生效;steamcmd 引擎下不保证',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -526,6 +526,7 @@ class _PublishPageState extends State<PublishPage> {
                           description: _descCtrl.text,
                           changeNote: _noteCtrl.text,
                           visibility: _visibility,
+                          tags: List.of(_tags),
                         );
                         if (ok) {
                           await DraftStore.clear(mod.path);

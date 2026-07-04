@@ -22,7 +22,51 @@ class SettingsPage extends StatelessWidget {
             style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant)),
         const SizedBox(height: 18),
         SectionCard(
-          title: '发布环境',
+          title: '发布引擎',
+          subtitle: '默认 Steamworks:开着 Steam 即可,免账号免密码(与官方工具同机制);steamcmd 供 CI / 无桌面 Steam 环境',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(
+                      value: 'steamworks', label: Text('Steamworks(推荐)')),
+                  ButtonSegment(value: 'steamcmd', label: Text('steamcmd')),
+                ],
+                selected: {state.engine},
+                onSelectionChanged: (s) => state.setEngine(s.first),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                state.engine == 'steamworks'
+                    ? (state.steamReady
+                        ? '✓ 助手已就绪 —— Steam 客户端开着就能发布,身份来自 Steam 本身'
+                        : '✗ 未找到 helper\\CpSteamHelper.exe —— 请使用完整发行包(开发模式需先构建 helper)')
+                    : (state.steamReady
+                        ? '✓ steamcmd 已配置'
+                        : '✗ 需要配置下方 steamcmd 路径与账号'),
+                style: TextStyle(
+                    fontSize: 12.5,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        SectionCard(
+          title: '通用',
+          child: _PathRow(
+            label: 'mods 目录',
+            value: state.modsDir.isEmpty ? '未设置' : state.modsDir,
+            onPick: () async {
+              final dir = await getDirectoryPath();
+              if (dir != null) await state.setModsDir(dir);
+            },
+          ),
+        ),
+        const SizedBox(height: 14),
+        SectionCard(
+          title: 'steamcmd(高级 · 仅 steamcmd 引擎需要)',
           child: Column(
             children: [
               _PathRow(
@@ -42,15 +86,6 @@ class SettingsPage extends StatelessWidget {
                 hint: '首次需在终端运行 steamcmd +login <账号> 过一次 Steam Guard',
                 value: state.steamUser,
                 onSave: state.setSteamUser,
-              ),
-              const Divider(height: 20),
-              _PathRow(
-                label: 'mods 目录',
-                value: state.modsDir.isEmpty ? '未设置' : state.modsDir,
-                onPick: () async {
-                  final dir = await getDirectoryPath();
-                  if (dir != null) await state.setModsDir(dir);
-                },
               ),
             ],
           ),

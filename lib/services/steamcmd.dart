@@ -33,6 +33,7 @@ class PublishRequest {
   final String description; // BBCode
   final String changeNote;
   final int visibility;
+  final List<String> tags; // steamcmd 路径不支持;Steamworks 引擎走 SetItemTags
 
   const PublishRequest({
     required this.appId,
@@ -43,6 +44,7 @@ class PublishRequest {
     required this.description,
     required this.changeNote,
     required this.visibility,
+    this.tags = const [],
   });
 }
 

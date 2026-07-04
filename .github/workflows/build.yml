@@ -30,6 +30,14 @@ jobs:
       - name: 构建 Release
         run: flutter build windows --release
 
+      - name: 构建 Steamworks 助手(C#,自包含单文件)
+        run: dotnet publish helper/CpSteamHelper.csproj -c Release -o helper_out
+
+      - name: 合并助手到发布目录
+        run: |
+          New-Item -ItemType Directory -Force build/windows/x64/runner/Release/helper | Out-Null
+          Copy-Item helper_out/* build/windows/x64/runner/Release/helper -Recurse -Force
+
       - name: 打包
         run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath ConstantPublisher-windows.zip
 
