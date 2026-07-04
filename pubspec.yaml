@@ -1,0 +1,23 @@
+name: constant_publisher
+description: 饥荒 Steam 创意工坊模组上传器 —— Material You 界面 + steamcmd 引擎
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.1.2
+  window_manager: ^0.4.3
+  shared_preferences: ^2.3.2
+  file_selector: ^1.0.3
+  url_launcher: ^6.3.0
+  path: ^1.9.0
+
+dev_dependencies:
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true

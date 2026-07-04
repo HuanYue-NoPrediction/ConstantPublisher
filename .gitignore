@@ -1,0 +1,15 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+
+# 平台壳由 flutter create 生成,按需提交;默认忽略构建产物
+windows/flutter/ephemeral/
+
+# IDE
+.idea/
+.vscode/
+*.iml
