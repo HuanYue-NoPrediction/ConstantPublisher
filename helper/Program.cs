@@ -25,9 +25,11 @@ internal static class Program
 
     private static bool _createDone;
     private static bool _submitDone;
+    private static bool _queryDone;
     private static bool _ioFailure;
     private static CreateItemResult_t _createResult;
     private static SubmitItemUpdateResult_t _submitResult;
+    private static SteamUGCQueryCompleted_t _queryResult;
 
     private static void Emit(object o) =>
         Console.WriteLine(JsonSerializer.Serialize(o));
@@ -38,6 +40,32 @@ internal static class Program
     private static int Main(string[] args)
     {
         Console.OutputEncoding = new UTF8Encoding(false);
+
+        // 模式二:list <appid> —— 借 Steam 会话列出当前账号名下的工坊条目,零配置
+        if (args.Length >= 1 && args[0] == "list")
+        {
+            var listAppId = args.Length >= 2 && uint.TryParse(args[1], out var a) ? a : 322330u;
+            Environment.SetEnvironmentVariable("SteamAppId", listAppId.ToString());
+            Environment.SetEnvironmentVariable("SteamGameId", listAppId.ToString());
+            if (!SteamAPI.Init())
+            {
+                Fail($"无法连接 Steam:请确认 Steam 客户端正在运行并已登录,且该账号拥有 AppID {listAppId} 对应的游戏");
+                return 0;
+            }
+            try
+            {
+                return RunList(new AppId_t(listAppId));
+            }
+            catch (Exception e)
+            {
+                Fail("助手内部异常: " + e.Message);
+                return 0;
+            }
+            finally
+            {
+                SteamAPI.Shutdown();
+            }
+        }
 
         if (args.Length < 1 || !File.Exists(args[0]))
         {
@@ -164,6 +192,70 @@ internal static class Program
             needsLegalAgreement = _submitResult.m_bUserNeedsToAcceptWorkshopLegalAgreement,
         });
         return 0;
+    }
+
+    private static int RunList(AppId_t appId)
+    {
+        var account = SteamUser.GetSteamID().GetAccountID();
+        uint page = 1;
+        var total = 0;
+        while (page <= 10)
+        {
+            var q = SteamUGC.CreateQueryUserUGCRequest(
+                account,
+                EUserUGCList.k_EUserUGCList_Published,
+                EUGCMatchingUGCType.k_EUGCMatchingUGCType_Items,
+                EUserUGCListSortOrder.k_EUserUGCListSortOrder_LastUpdatedDesc,
+                appId, appId, page);
+            _queryDone = false;
+            var cr = CallResult<SteamUGCQueryCompleted_t>.Create(OnQuery);
+            cr.Set(SteamUGC.SendQueryUGCRequest(q));
+            if (!Pump(() => _queryDone, 30))
+            {
+                SteamUGC.ReleaseQueryUGCRequest(q);
+                Fail("QueryUserUGC 超时(30 秒)");
+                return 0;
+            }
+            if (_ioFailure || _queryResult.m_eResult != EResult.k_EResultOK)
+            {
+                SteamUGC.ReleaseQueryUGCRequest(q);
+                Fail("QueryUserUGC 失败", (int)_queryResult.m_eResult);
+                return 0;
+            }
+            var n = _queryResult.m_unNumResultsReturned;
+            for (uint i = 0; i < n; i++)
+            {
+                if (!SteamUGC.GetQueryUGCResult(_queryResult.m_handle, i, out SteamUGCDetails_t d))
+                {
+                    continue;
+                }
+                ulong subs = 0;
+                SteamUGC.GetQueryUGCStatistic(_queryResult.m_handle, i,
+                    EItemStatistic.k_EItemStatistic_NumSubscriptions, out subs);
+                Emit(new
+                {
+                    @event = "item",
+                    id = d.m_nPublishedFileId.m_PublishedFileId.ToString(),
+                    title = d.m_rgchTitle,
+                    subs,
+                    updated = d.m_rtimeUpdated,
+                    visibility = (int)d.m_eVisibility,
+                });
+                total++;
+            }
+            SteamUGC.ReleaseQueryUGCRequest(q);
+            if (n < Constants.kNumUGCResultsPerPage) break;
+            page++;
+        }
+        Emit(new { @event = "result", ok = true, count = total });
+        return 0;
+    }
+
+    private static void OnQuery(SteamUGCQueryCompleted_t r, bool ioFail)
+    {
+        _queryResult = r;
+        _ioFailure = ioFail;
+        _queryDone = true;
     }
 
     private static bool Pump(Func<bool> done, int timeoutSec)

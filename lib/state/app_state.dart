@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -326,8 +327,59 @@ class AppState extends ChangeNotifier {
 
   // ---------- 工坊巡检 ----------
   Future<void> refreshRemote() async {
+    // 首选:Steamworks 助手直查(QueryUserUGC,零配置,官方工具同款机制)
+    if (engine == 'steamworks' && File(helperPath).existsSync()) {
+      try {
+        final proc = await Process.start(helperPath, ['list', '322330']);
+        await proc.stdin.close();
+        final errFuture = proc.stderr
+            .transform(utf8.decoder)
+            .transform(const LineSplitter())
+            .toList();
+        final items = <WorkshopItemRemote>[];
+        String? error;
+        var ok = false;
+        await for (final line in proc.stdout
+            .transform(utf8.decoder)
+            .transform(const LineSplitter())) {
+          try {
+            final j = jsonDecode(line) as Map<String, dynamic>;
+            if (j['event'] == 'item') {
+              items.add(WorkshopItemRemote(
+                id: j['id'].toString(),
+                title: j['title'] as String? ?? '(无标题)',
+                subs: (j['subs'] as num?)?.toInt() ?? 0,
+                updated: j['updated'] != null && (j['updated'] as num) > 0
+                    ? DateTime.fromMillisecondsSinceEpoch(
+                        (j['updated'] as num).toInt() * 1000)
+                    : null,
+              ));
+            } else if (j['event'] == 'result') {
+              ok = j['ok'] == true;
+              if (!ok) error = j['error']?.toString();
+            }
+          } catch (_) {/* 非 JSON 行忽略 */}
+        }
+        await errFuture;
+        await proc.exitCode;
+        if (ok) {
+          remoteItems = items;
+          log(LogLevel.info,
+              'QueryUserUGC → ${items.length} 个条目(零配置,来自 Steam 会话)');
+        } else {
+          log(LogLevel.error, '拉取名下条目失败:${error ?? '未知错误'}');
+        }
+      } catch (e) {
+        log(LogLevel.error, '拉取名下条目失败:$e');
+      }
+      notifyListeners();
+      return;
+    }
+
+    // 备用:Steam Web API(steamcmd 引擎 / 无助手环境)
     if (webApiKey.isEmpty || steamId64.isEmpty) {
-      log(LogLevel.warn, '未配置 Steam Web API Key / SteamID64,无法拉取名下条目(不影响发布)');
+      log(LogLevel.warn,
+          'steamcmd 引擎下拉取名下条目需配置 Web API Key / SteamID64(设置页);切回 Steamworks 引擎则零配置');
       return;
     }
     try {
