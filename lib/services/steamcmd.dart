@@ -95,6 +95,14 @@ class SteamcmdEngine {
       '+workshop_build_item', vdfFile.path,
       '+quit',
     ]);
+    // 立即关闭子进程 stdin:交互式提示(密码/Steam Guard)会直接 EOF 失败退出,
+    // 走下面的错误分支,而不是让应用无限等待一个看不见的输入框
+    await proc.stdin.close();
+    // stderr 必须与 stdout 并发排空,否则管道缓冲区写满时 steamcmd 会被阻塞,双方死锁
+    final errLinesFuture = proc.stderr
+        .transform(const SystemEncoding().decoder)
+        .transform(const LineSplitter())
+        .toList();
 
     String? newId;
     var sawGuard = false;
@@ -118,10 +126,8 @@ class SteamcmdEngine {
         eresult = 2;
       }
     }
-    // stderr 一并写进日志
-    await for (final line in proc.stderr
-        .transform(const SystemEncoding().decoder)
-        .transform(const LineSplitter())) {
+    // stderr 一并写进日志(启动后已并发排空)
+    for (final line in await errLinesFuture) {
       yield PublishEvent(logLine: '[err] $line');
     }
 
