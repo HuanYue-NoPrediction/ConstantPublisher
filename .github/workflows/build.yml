@@ -42,16 +42,16 @@ jobs:
           if (-not (Test-Path build/windows/x64/runner/Release/helper/steam_api64.dll)) { throw 'steam_api64.dll 缺失!' }
 
       - name: 打包
-        run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath ConstantPublisher-windows.zip
+        run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath DSTModPublisher-windows.zip
 
       - name: 上传构建产物(每次推送都有)
         uses: actions/upload-artifact@v4
         with:
-          name: ConstantPublisher-windows
-          path: ConstantPublisher-windows.zip
+          name: DSTModPublisher-windows
+          path: DSTModPublisher-windows.zip
 
       - name: 发布 Release(推送 v* 标签时)
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: ConstantPublisher-windows.zip
+          files: DSTModPublisher-windows.zip
