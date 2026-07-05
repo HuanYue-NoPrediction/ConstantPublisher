@@ -1,4 +1,4 @@
-name: Build Windows
+name: Build
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -55,3 +55,63 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: DSTModPublisher-windows.zip
+
+  # 实验性:未签名 macOS 包,用于验证 Steamworks 发布链路(尤其 appid 245850 能否 init)
+  macos:
+    runs-on: macos-14 # Apple Silicon runner
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: 生成 macOS 平台壳
+        run: flutter create . --platforms=macos --project-name dst_mod_publisher
+
+      - name: 关闭 App Sandbox(否则无法拉起 helper 子进程 / 连 Steam)
+        run: |
+          for f in macos/Runner/*.entitlements; do
+            /usr/libexec/PlistBuddy -c "Set :com.apple.security.app-sandbox false" "$f" || true
+            /usr/libexec/PlistBuddy -c "Add :com.apple.security.cs.disable-library-validation bool true" "$f" || true
+          done
+
+      - name: 拉取依赖
+        run: flutter pub get
+
+      - name: 构建 Release
+        run: flutter build macos --release
+
+      - name: 构建 Steamworks 助手(osx-arm64,自包含单文件)
+        run: dotnet publish helper/CpSteamHelper.csproj -c Release -r osx-arm64 -o helper_out
+
+      - name: 合并助手到 .app 内(含 libsteam_api.dylib)
+        run: |
+          APP="build/macos/Build/Products/Release/dst_mod_publisher.app"
+          DEST="$APP/Contents/MacOS/helper"
+          mkdir -p "$DEST"
+          cp -R helper_out/* "$DEST/"
+          cp helper/native/libsteam_api.dylib "$DEST/"
+          chmod +x "$DEST/CpSteamHelper"
+          test -f "$DEST/libsteam_api.dylib" || (echo 'dylib 缺失!' && exit 1)
+          # 对 .app 做 ad-hoc 签名(Apple 芯片要求 arm64 至少有签名才能运行)
+          codesign --force --deep --sign - "$APP"
+
+      - name: 打包(zip 保留 .app 结构与可执行位)
+        run: |
+          cd build/macos/Build/Products/Release
+          ditto -c -k --keepParent dst_mod_publisher.app "$GITHUB_WORKSPACE/DSTModPublisher-macos.zip"
+
+      - name: 上传 macOS 构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: DSTModPublisher-macos
+          path: DSTModPublisher-macos.zip
+
+      - name: 发布 Release(推送 v* 标签时)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: DSTModPublisher-macos.zip

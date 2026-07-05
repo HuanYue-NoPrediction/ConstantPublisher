@@ -6,7 +6,8 @@
     <Nullable>enable</Nullable>
     <AssemblyName>CpSteamHelper</AssemblyName>
     <RootNamespace>CpSteamHelper</RootNamespace>
-    <!-- 单文件自包含:最终用户无需安装 .NET 运行时 -->
+    <!-- 单文件自包含:最终用户无需安装 .NET 运行时。
+         默认 win-x64;跨平台构建时用 CLI 的 -r 覆盖(如 -r osx-arm64) -->
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
@@ -19,11 +20,17 @@
     <PackageReference Include="Steamworks.NET" Version="20.*" />
   </ItemGroup>
 
-  <ItemGroup>
-    <!-- Valve 的 Steamworks 再分发件,必须以松散文件形式放在 exe 旁(不打进单文件包)。
-         Content + CopyToPublishDirectory 确保 dotnet publish 也会带出它 -->
+  <!-- Valve 的 Steamworks 再分发件,按目标平台带对应原生库(松散文件放在可执行文件旁) -->
+  <ItemGroup Condition="$(RuntimeIdentifier.StartsWith('win'))">
     <Content Include="native\steam_api64.dll">
       <Link>steam_api64.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup Condition="$(RuntimeIdentifier.StartsWith('osx'))">
+    <Content Include="native\libsteam_api.dylib">
+      <Link>libsteam_api.dylib</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>

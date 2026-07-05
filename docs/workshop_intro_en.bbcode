@@ -1,0 +1,56 @@
+[h1]DST Mod Publisher[/h1]
+
+[b]A modern Workshop uploader for Don't Starve modders — just keep Steam running. A drop-in replacement for the official ModUploader.[/b]
+[img]https://images.steamusercontent.com/ugc/13762441291674141972/C09A22296D9E12543A2697D19567A690CA4239FC/?imw=637&imh=358&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true[/img]
+
+[hr][/hr]
+
+[h2]Why this exists[/h2]
+Every mod author knows the pain of the official uploader:
+[list]
+[*]An upload fails and [b]wipes everything you just typed[/b]
+[*]It ships the whole folder — .git, PSD sources and backup archives all end up on the Workshop
+[*]The description is a single raw text box; you write BBCode blind
+[*]No changelog, so subscribers never know what you changed
+[*]You must edit the version in modinfo.lua by hand — forget it and the update silently fails
+[*]Errors are just a number: good luck guessing what EResult 25 means
+[/list]
+
+[h2]How this tool fixes it[/h2]
+[list]
+[*][b]Zero setup[/b] — keep Steam running and own the game; unzip and double-click. No account, no password, no dependencies (same Steamworks mechanism as the official tool)
+[*][b]Auto-saved drafts[/b] — everything you edit is saved as you type; a failed upload keeps it all, just fix and retry
+[*][b]BBCode editor[/b] — toolbar with live preview; when updating an existing mod it pulls the current Workshop description as your starting point
+[*][b]Changelog[/b] — write a change note on every update, straight into Steam's official "Change Notes"
+[*][b]Clean uploads[/b] — ignores .git / exported / source files / archives / exe by default, shows the exact file list before upload, and supports a custom .modignore
+[*][b]Version automation[/b] — one-click bump written back into modinfo.lua, auto-maintained version: tag, and a hard check that the new version is greater than what's live
+[*][b]Manage your items[/b] — thumbnails, subscriptions, favorites, comment counts and rating at a glance; multi-select tag filtering; one click to the comments page
+[*][b]Target and content are separate[/b] — pick the publish target (an existing item or a new one) and the content folder independently; updating an old item from a new folder or a new machine is effortless
+[*][b]Errors in plain language[/b] — EResult codes are translated with suggested fixes
+[*][b]Modern UI[/b] — Material You design, dark mode, 14 accent colors
+[*][b]Multi-language pages[/b] — edit the title and description per language, each submitted separately so Steam shows subscribers their own language
+[/list]
+
+[h2]Three steps to start[/h2]
+[olist]
+[*]Download and unzip the release; make sure the Steam client is logged in
+[*]Run dst_mod_publisher.exe and pick your mods folder under Settings
+[*]Hit "Update" on the Workshop page (or pick a folder on the Publish page) → fill in the version and notes → publish
+[/olist]
+
+[h2]How to get it[/h2]
+[olist]
+[*][b]Subscribe to this page[/b] and let Steam finish downloading
+[*]Open [b]steamapps/workshop/content/322330/THIS_ITEM_ID/[/b] (the numeric ID is in your browser's address bar)
+[*]Unzip [b]DSTModPublisher-windows.zip[/b] inside and run dst_mod_publisher.exe — no dependencies, works as long as Steam is running
+[/olist]
+
+[h2]Open source[/h2]
+[list]
+[*]GPL-3.0: [url=https://github.com/HuanYue-NoPrediction/ConstantPublisher]GitHub repo[/url] (source and Releases; this build is kept in sync with the Workshop)
+[*]Dual engine: Steamworks by default on desktop; a steamcmd engine is also included for CI / headless environments
+[/list]
+
+[hr][/hr]
+
+[i]This is a community tool, not affiliated with Klei Entertainment or Valve. Don't Starve is a trademark of Klei Entertainment; Steam is a trademark of Valve. Steam may show "Playing Don't Starve Together" while uploading — that's normal, as the tool attaches to the game's Steamworks session.[/i]

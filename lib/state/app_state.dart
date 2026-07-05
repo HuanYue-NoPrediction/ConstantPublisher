@@ -148,7 +148,7 @@ class AppState extends ChangeNotifier {
   String get helperPath => p.join(
       File(Platform.resolvedExecutable).parent.path,
       'helper',
-      'CpSteamHelper.exe');
+      Platform.isWindows ? 'CpSteamHelper.exe' : 'CpSteamHelper');
 
   bool get steamReady => engine == 'steamworks'
       ? File(helperPath).existsSync()
