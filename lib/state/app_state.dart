@@ -384,6 +384,7 @@ class AppState extends ChangeNotifier {
                     .toList(),
                 version: versionFromMeta(j['meta'] as String?),
                 previewUrl: j['preview'] as String? ?? '',
+                description: j['desc'] as String? ?? '',
               ));
             } else if (j['event'] == 'result') {
               ok = j['ok'] == true;

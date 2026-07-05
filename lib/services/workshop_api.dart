@@ -17,6 +17,9 @@ class WorkshopItemRemote {
   /// 工坊封面图 CDN 直链(可能为空)。
   final String previewUrl;
 
+  /// 工坊现有简介(BBCode 全文),更新时作为编辑基线。
+  final String description;
+
   const WorkshopItemRemote({
     required this.id,
     required this.title,
@@ -25,6 +28,7 @@ class WorkshopItemRemote {
     this.tags = const [],
     this.version = '',
     this.previewUrl = '',
+    this.description = '',
   });
 }
 
@@ -47,6 +51,7 @@ Future<List<WorkshopItemRemote>> fetchUserItems({
     'numperpage': '100',
     'return_details': 'true',
     'return_tags': 'true',
+    'return_long_description': 'true',
   });
 
   final client = HttpClient();
@@ -76,6 +81,7 @@ Future<List<WorkshopItemRemote>> fetchUserItems({
                 .toList() ??
             const [],
         previewUrl: m['preview_url'] as String? ?? '',
+        description: m['file_description'] as String? ?? '',
       );
     }).toList();
   } finally {

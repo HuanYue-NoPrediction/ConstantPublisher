@@ -50,9 +50,18 @@ class _PublishPageState extends State<PublishPage> {
 
   /// 模组切换时:重置为该模组默认值,再叠加草稿。
   Future<void> _loadFor(Mod mod) async {
+    final state = context.read<AppState>();
+    final remote = mod.linked
+        ? state.remoteItems
+            .where((x) => x.id == mod.pub.publishedFileId)
+            .firstOrNull
+        : null;
     _modPath = mod.path;
     _verCtrl.text = mod.info.version;
-    _descCtrl.text = mod.info.description;
+    // 更新已发布条目时,简介默认取工坊现有全文(在其基础上改),否则用本地 modinfo
+    _descCtrl.text = (remote != null && remote.description.isNotEmpty)
+        ? remote.description
+        : mod.info.description;
     _noteCtrl.text = '';
     _tags = List.of(mod.pub.tags);
     _visibility = mod.pub.visibility;
@@ -182,10 +191,27 @@ class _PublishPageState extends State<PublishPage> {
             const SizedBox(width: 10),
             OutlinedButton.icon(
               onPressed: () async {
+                // 若当前正在更新某工坊条目,换文件夹时把该条目的绑定带过去,
+                // 避免新文件夹被当成"首次发布"而误建新条目、丢失工坊封面
+                final carryId = mod.linked ? mod.pub.publishedFileId : null;
                 final dir = await getDirectoryPath();
                 if (dir == null) return;
                 final m = await state.addExternalFolder(dir);
-                if (m != null) state.select(m);
+                if (m == null) return;
+                if (carryId != null && !m.linked) {
+                  final rv = state.remoteItems
+                      .where((x) => x.id == carryId)
+                      .firstOrNull;
+                  await state.bindItem(m, carryId,
+                      knownVersion: (rv != null && rv.version.isNotEmpty)
+                          ? rv.version
+                          : null);
+                  if (context.mounted) {
+                    toast(context,
+                        '已把条目 $carryId 的内容来源切换为 ${m.folderName}/');
+                  }
+                }
+                state.select(m);
               },
               icon: const Icon(Icons.folder_open, size: 18),
               label: const Text('其他文件夹…'),

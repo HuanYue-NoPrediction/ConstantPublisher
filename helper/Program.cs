@@ -208,6 +208,7 @@ internal static class Program
                 EUserUGCListSortOrder.k_EUserUGCListSortOrder_LastUpdatedDesc,
                 new AppId_t(0), appId, page);
             SteamUGC.SetReturnMetadata(q, true);
+            SteamUGC.SetReturnLongDescription(q, true);
             _queryDone = false;
             var cr = CallResult<SteamUGCQueryCompleted_t>.Create(OnQuery);
             cr.Set(SteamUGC.SendQueryUGCRequest(q));
@@ -248,6 +249,7 @@ internal static class Program
                     tags = d.m_rgchTags, // 逗号分隔的工坊标签
                     meta, // 本工具发布时写入的版本号(老条目为空)
                     preview = previewUrl, // 封面图 CDN 直链
+                    desc = d.m_rgchDescription, // 工坊现有简介(BBCode 全文)
                 });
                 total++;
             }
