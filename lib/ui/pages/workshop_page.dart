@@ -44,6 +44,8 @@ class _WorkshopPageState extends State<WorkshopPage> {
     final tagCounts = <String, int>{};
     for (final it in state.remoteItems) {
       for (final t in it.tags) {
+        // version:X 是 DST 存版本号用的标签,不是分类,排除出筛选
+        if (t.startsWith('version:')) continue;
         tagCounts[t] = (tagCounts[t] ?? 0) + 1;
       }
     }

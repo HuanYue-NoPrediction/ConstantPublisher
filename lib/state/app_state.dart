@@ -360,6 +360,19 @@ class AppState extends ChangeNotifier {
           try {
             final j = jsonDecode(line) as Map<String, dynamic>;
             if (j['event'] == 'item') {
+              final tags = (j['tags'] as String? ?? '')
+                  .split(',')
+                  .map((t) => t.trim())
+                  .where((t) => t.isNotEmpty)
+                  .toList();
+              // 版本优先取本工具写入的 metadata;老模组无 metadata 时,
+              // 回退解析 DST 的 version:X 标签(官方工具留下的)
+              var ver = versionFromMeta(j['meta'] as String?);
+              if (ver.isEmpty) {
+                final vt = tags.firstWhere((t) => t.startsWith('version:'),
+                    orElse: () => '');
+                if (vt.isNotEmpty) ver = vt.substring('version:'.length);
+              }
               items.add(WorkshopItemRemote(
                 id: j['id'].toString(),
                 title: j['title'] as String? ?? '(无标题)',
@@ -374,12 +387,8 @@ class AppState extends ChangeNotifier {
                     ? DateTime.fromMillisecondsSinceEpoch(
                         (j['updated'] as num).toInt() * 1000)
                     : null,
-                tags: (j['tags'] as String? ?? '')
-                    .split(',')
-                    .map((t) => t.trim())
-                    .where((t) => t.isNotEmpty)
-                    .toList(),
-                version: versionFromMeta(j['meta'] as String?),
+                tags: tags,
+                version: ver,
                 previewUrl: j['preview'] as String? ?? '',
                 description: j['desc'] as String? ?? '',
               ));
