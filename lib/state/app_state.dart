@@ -106,6 +106,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> setModsDir(String dir) async {
     modsDir = dir;
+    notifyListeners(); // 立即刷新路径显示,不等后面较慢的扫描
     await _persist('modsDir', dir);
     await scanMods();
   }
@@ -162,8 +163,13 @@ class AppState extends ChangeNotifier {
     if (await root.exists()) {
       await for (final ent in root.list(followLinks: false)) {
         if (ent is! Directory) continue;
-        final mod = await Mod.load(ent);
-        if (mod != null) mods.add(mod);
+        try {
+          final mod = await Mod.load(ent);
+          if (mod != null) mods.add(mod);
+        } catch (e) {
+          // 单个坏模组不能中断整轮扫描
+          log(LogLevel.warn, '跳过无法读取的模组 ${ent.path}:$e');
+        }
       }
       mods.sort((a, b) => a.info.name.compareTo(b.info.name));
       log(LogLevel.info, '扫描 $modsDir → ${mods.length} 个模组');

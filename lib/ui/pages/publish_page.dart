@@ -603,7 +603,17 @@ class _PublishPageState extends State<PublishPage> {
         : ext == '.gif'
             ? 'preview.gif'
             : 'preview.jpg';
-    await File(f.path).copy(p.join(mod.path, name));
+    final target = File(p.join(mod.path, name));
+    await File(f.path).copy(target.path);
+    // 删掉其他同名旧预览(否则会残留多份,mod.preview 取谁存疑)
+    for (final other in ['preview.jpg', 'preview.png', 'preview.gif']) {
+      if (other != name) {
+        final of = File(p.join(mod.path, other));
+        if (await of.exists()) await of.delete();
+      }
+    }
+    // 关键:Image.file 按路径缓存解码结果,同名替换后必须清缓存才会重画
+    await FileImage(target).evict();
     if (mounted) {
       setState(() {});
       toast(context, '预览图已更新为 $name');

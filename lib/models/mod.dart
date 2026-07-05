@@ -135,7 +135,10 @@ class Mod {
   static Future<Mod?> load(Directory d) async {
     final mi = File(p.join(d.path, 'modinfo.lua'));
     if (!await mi.exists()) return null;
-    final info = ModInfo.parse(await mi.readAsString());
+    // 宽容解码:不少老模组的 modinfo.lua 是 GBK/ANSI,严格 UTF-8 会抛异常
+    // 拖垮整个扫描;allowMalformed 保证不崩(ASCII 字段照常解析)。
+    final text = utf8.decode(await mi.readAsBytes(), allowMalformed: true);
+    final info = ModInfo.parse(text);
     var pub = DstPub();
     final pf = File(p.join(d.path, 'dstpub.json'));
     if (await pf.exists()) {
