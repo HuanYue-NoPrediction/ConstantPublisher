@@ -296,7 +296,8 @@ extension on _WorkshopPageState {
       mod = choice as Mod?;
     }
     if (mod == null) return;
-    await state.bindItem(mod, it.id);
+    await state.bindItem(mod, it.id,
+        knownVersion: it.version.isEmpty ? null : it.version);
     state.selectAndGoPublish(mod);
   }
 }
@@ -399,7 +400,13 @@ class _BindFormState extends State<_BindForm> {
               toast(context, '请选择工坊条目和本地文件夹');
               return;
             }
-            await state.bindItem(target, id);
+            final remoteIt =
+                remote.where((x) => x.id == id).firstOrNull;
+            await state.bindItem(target, id,
+                knownVersion:
+                    (remoteIt != null && remoteIt.version.isNotEmpty)
+                        ? remoteIt.version
+                        : null);
             if (context.mounted) {
               toast(context, '已绑定,「发布」即上传该文件夹内容到条目 $id');
             }

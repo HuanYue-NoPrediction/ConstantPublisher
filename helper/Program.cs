@@ -21,7 +21,8 @@ internal static class Program
         string Description,
         string ChangeNote,
         int Visibility,
-        string[]? Tags);
+        string[]? Tags,
+        string? Version);
 
     private static bool _createDone;
     private static bool _submitDone;
@@ -147,6 +148,11 @@ internal static class Program
         {
             SteamUGC.SetItemTags(h, new List<string>(req.Tags));
         }
+        if (!string.IsNullOrEmpty(req.Version))
+        {
+            // 把 modinfo 版本写进 UGC metadata:list 模式读回,任何机器重新绑定都能拿到工坊版本
+            SteamUGC.SetItemMetadata(h, req.Version);
+        }
 
         Emit(new { @event = "stage", stage = "SubmitItemUpdate · 开始上传" });
         var sub = SteamUGC.SubmitItemUpdate(h, req.ChangeNote);
@@ -201,6 +207,7 @@ internal static class Program
                 EUGCMatchingUGCType.k_EUGCMatchingUGCType_Items,
                 EUserUGCListSortOrder.k_EUserUGCListSortOrder_LastUpdatedDesc,
                 new AppId_t(0), appId, page);
+            SteamUGC.SetReturnMetadata(q, true);
             _queryDone = false;
             var cr = CallResult<SteamUGCQueryCompleted_t>.Create(OnQuery);
             cr.Set(SteamUGC.SendQueryUGCRequest(q));
@@ -226,6 +233,8 @@ internal static class Program
                 ulong subs = 0;
                 SteamUGC.GetQueryUGCStatistic(_queryResult.m_handle, i,
                     EItemStatistic.k_EItemStatistic_NumSubscriptions, out subs);
+                SteamUGC.GetQueryUGCMetadata(_queryResult.m_handle, i,
+                    out string meta, Constants.k_cchDeveloperMetadataMax);
                 Emit(new
                 {
                     @event = "item",
@@ -235,6 +244,7 @@ internal static class Program
                     updated = d.m_rtimeUpdated,
                     visibility = (int)d.m_eVisibility,
                     tags = d.m_rgchTags, // 逗号分隔的工坊标签
+                    meta, // 本工具发布时写入的版本号(老条目为空)
                 });
                 total++;
             }

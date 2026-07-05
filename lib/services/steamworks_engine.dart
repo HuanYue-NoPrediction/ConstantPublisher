@@ -37,6 +37,7 @@ class SteamworksEngine {
       'changeNote': req.changeNote,
       'visibility': req.visibility,
       'tags': req.tags,
+      'version': req.version,
     }));
 
     yield const PublishEvent(stage: '连接 Steam 客户端', progress: .12);

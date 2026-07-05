@@ -34,6 +34,7 @@ class PublishRequest {
   final String changeNote;
   final int visibility;
   final List<String> tags; // steamcmd 路径不支持;Steamworks 引擎走 SetItemTags
+  final String version; // 写入 UGC metadata,供跨机器绑定时读回工坊版本
 
   const PublishRequest({
     required this.appId,
@@ -45,6 +46,7 @@ class PublishRequest {
     required this.changeNote,
     required this.visibility,
     this.tags = const [],
+    this.version = '',
   });
 }
 

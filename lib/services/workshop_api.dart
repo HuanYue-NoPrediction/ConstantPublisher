@@ -11,13 +11,23 @@ class WorkshopItemRemote {
   final DateTime? updated;
   final List<String> tags;
 
+  /// 工坊版本号:来自条目 metadata(本工具发布时写入;老条目为空)。
+  final String version;
+
   const WorkshopItemRemote({
     required this.id,
     required this.title,
     required this.subs,
     this.updated,
     this.tags = const [],
+    this.version = '',
   });
+}
+
+/// metadata 里长得像版本号才认(防止其他工具写的任意内容混进来)。
+String versionFromMeta(String? meta) {
+  final m = (meta ?? '').trim();
+  return RegExp(r'^\d[\w.\-]{0,30}$').hasMatch(m) ? m : '';
 }
 
 Future<List<WorkshopItemRemote>> fetchUserItems({

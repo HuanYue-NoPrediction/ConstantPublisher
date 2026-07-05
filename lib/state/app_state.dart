@@ -300,6 +300,7 @@ class AppState extends ChangeNotifier {
         changeNote: changeNote,
         visibility: visibility,
         tags: tags,
+        version: version,
       );
       final Stream<PublishEvent> events = engine == 'steamworks'
           ? SteamworksEngine(helperPath: helperPath).publish(req)
@@ -376,6 +377,7 @@ class AppState extends ChangeNotifier {
                     .map((t) => t.trim())
                     .where((t) => t.isNotEmpty)
                     .toList(),
+                version: versionFromMeta(j['meta'] as String?),
               ));
             } else if (j['event'] == 'result') {
               ok = j['ok'] == true;

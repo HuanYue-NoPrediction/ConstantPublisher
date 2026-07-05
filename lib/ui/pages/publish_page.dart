@@ -237,16 +237,22 @@ class _PublishPageState extends State<PublishPage> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  last == null
+                  !mod.linked
                       ? '✓ 首次发布,将新建工坊条目'
-                      : verOk
-                          ? '✓ 大于上次发布 $last'
-                          : '✕ 需大于上次发布 $last(自增按两者较高版本计算)',
+                      : last == null
+                          ? '⚠ 更新条目 ${mod.pub.publishedFileId},但工坊版本未知(老条目无版本元数据)—— 请确认大于线上版本;本次发布后将自动记录'
+                          : verOk
+                              ? '✓ 大于工坊当前 $last'
+                              : '✕ 需大于工坊当前 $last(自增按两者较高版本计算)',
                   style: TextStyle(
                       fontSize: 12.5,
-                      color: verOk || last == null
+                      color: !mod.linked
                           ? sem.success
-                          : scheme.error),
+                          : last == null
+                              ? sem.warn
+                              : verOk
+                                  ? sem.success
+                                  : scheme.error),
                 ),
               ),
             ],
