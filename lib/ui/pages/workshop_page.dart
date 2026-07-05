@@ -1,9 +1,12 @@
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/mod.dart';
+import '../../services/workshop_api.dart';
 import '../../state/app_state.dart';
+import '../../theme.dart';
 import '../widgets/bits.dart';
 
 /// 工坊页:巡检 + 绑定管理。
@@ -17,7 +20,7 @@ class WorkshopPage extends StatefulWidget {
 
 class _WorkshopPageState extends State<WorkshopPage> {
   var _autoFetched = false;
-  String? _tagFilter;
+  final Set<String> _tagFilter = {};
 
   @override
   void didChangeDependencies() {
@@ -47,15 +50,14 @@ class _WorkshopPageState extends State<WorkshopPage> {
         tagCounts[t] = (tagCounts[t] ?? 0) + 1;
       }
     }
-    if (_tagFilter != null && !tagCounts.containsKey(_tagFilter)) {
-      _tagFilter = null;
-    }
+    _tagFilter.removeWhere((t) => !tagCounts.containsKey(t));
     final sortedTags = tagCounts.keys.toList()
       ..sort((a, b) => tagCounts[b]!.compareTo(tagCounts[a]!));
-    final filteredRemote = _tagFilter == null
+    // 多选 = 交集筛选,与 Steam 工坊侧边栏一致
+    final filteredRemote = _tagFilter.isEmpty
         ? state.remoteItems
         : state.remoteItems
-            .where((it) => it.tags.contains(_tagFilter))
+            .where((it) => _tagFilter.every(it.tags.contains))
             .toList();
 
     return ListView(
@@ -143,41 +145,159 @@ class _WorkshopPageState extends State<WorkshopPage> {
                         children: [
                           FilterChip(
                             label: Text('全部 (${state.remoteItems.length})'),
-                            selected: _tagFilter == null,
+                            selected: _tagFilter.isEmpty,
                             onSelected: (_) =>
-                                setState(() => _tagFilter = null),
+                                setState(() => _tagFilter.clear()),
                           ),
                           for (final t in sortedTags)
                             FilterChip(
                               label: Text('$t (${tagCounts[t]})'),
-                              selected: _tagFilter == t,
-                              onSelected: (_) => setState(() =>
-                                  _tagFilter = _tagFilter == t ? null : t),
+                              selected: _tagFilter.contains(t),
+                              onSelected: (on) => setState(() {
+                                if (on) {
+                                  _tagFilter.add(t);
+                                } else {
+                                  _tagFilter.remove(t);
+                                }
+                              }),
                             ),
                         ],
                       ),
                       const SizedBox(height: 12),
                     ],
                     for (final it in filteredRemote)
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.cloud_outlined),
-                        title: Text(it.title),
-                        subtitle: Text(
-                            'id ${it.id} · 订阅 ${it.subs}'
-                            '${it.updated != null ? ' · 更新于 ${it.updated!.toLocal().toString().substring(0, 16)}' : ''}',
-                            style: const TextStyle(
-                                fontFamily: 'monospace', fontSize: 12)),
-                        trailing: state.mods.any(
-                                (m) => m.pub.publishedFileId == it.id)
-                            ? const StatusBadge('已绑定', BadgeKind.ok)
-                            : const StatusBadge('未绑定本地', BadgeKind.warn),
-                      ),
+                      _remoteRow(state, scheme, it),
                   ],
                 ),
         ),
       ],
     );
+  }
+}
+
+extension on _WorkshopPageState {
+  String _shortDate(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  /// 远端条目行:标题 + id 在左;订阅/时间/绑定状态用图标靠右;每行都可「更新」。
+  Widget _remoteRow(AppState state, ColorScheme scheme, WorkshopItemRemote it) {
+    final sem = SemanticColors.of(context);
+    final bound =
+        state.mods.where((m) => m.pub.publishedFileId == it.id).firstOrNull;
+    final dim = TextStyle(fontSize: 12, color: scheme.onSurfaceVariant);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Row(
+        children: [
+          Icon(Icons.cloud_outlined, size: 20, color: scheme.onSurfaceVariant),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(it.title,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 13.5, fontWeight: FontWeight.w600)),
+                Text('id ${it.id}',
+                    style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 11,
+                        color: scheme.onSurfaceVariant)),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Tooltip(
+            message: '订阅数',
+            child: Row(children: [
+              Icon(Icons.people_alt_outlined,
+                  size: 15, color: scheme.onSurfaceVariant),
+              const SizedBox(width: 3),
+              Text('${it.subs}', style: dim),
+            ]),
+          ),
+          if (it.updated != null) ...[
+            const SizedBox(width: 14),
+            Tooltip(
+              message: '最近更新',
+              child: Row(children: [
+                Icon(Icons.schedule, size: 15, color: scheme.onSurfaceVariant),
+                const SizedBox(width: 3),
+                Text(_shortDate(it.updated!.toLocal()), style: dim),
+              ]),
+            ),
+          ],
+          const SizedBox(width: 14),
+          Tooltip(
+            message: bound != null
+                ? '已绑定 ${bound.folderName}/'
+                : '未绑定本地文件夹(点「更新」时选择)',
+            child: Icon(
+              bound != null ? Icons.link : Icons.link_off,
+              size: 16,
+              color: bound != null ? sem.success : scheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(width: 10),
+          FilledButton.tonal(
+            style: FilledButton.styleFrom(
+                minimumSize: const Size(0, 34),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                visualDensity: VisualDensity.compact),
+            onPressed: () => _updateItem(state, it),
+            child: const Text('更新'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 已绑定 → 直接进发布页;未绑定 → 先选文件夹(可浏览任意目录)再绑定。
+  Future<void> _updateItem(AppState state, WorkshopItemRemote it) async {
+    final bound =
+        state.mods.where((m) => m.pub.publishedFileId == it.id).firstOrNull;
+    if (bound != null) {
+      state.selectAndGoPublish(bound);
+      return;
+    }
+    final choice = await showDialog<Object>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: Text('为「${it.title}」选择本地文件夹',
+            style: const TextStyle(fontSize: 16)),
+        children: [
+          for (final m in state.mods)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(ctx, m),
+              child: Text(
+                  '${m.folderName}/ (v${m.info.version})'
+                  '${m.linked ? ' · 已绑定其他条目' : ''}',
+                  overflow: TextOverflow.ellipsis),
+            ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, 'browse'),
+            child: const Row(children: [
+              Icon(Icons.folder_open, size: 18),
+              SizedBox(width: 8),
+              Text('浏览其他文件夹…'),
+            ]),
+          ),
+        ],
+      ),
+    );
+    Mod? mod;
+    if (choice == 'browse') {
+      final dir = await getDirectoryPath();
+      if (dir == null) return;
+      mod = await state.addExternalFolder(dir);
+    } else {
+      mod = choice as Mod?;
+    }
+    if (mod == null) return;
+    await state.bindItem(mod, it.id);
+    state.selectAndGoPublish(mod);
   }
 }
 

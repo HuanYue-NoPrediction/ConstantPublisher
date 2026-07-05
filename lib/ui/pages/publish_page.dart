@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -152,6 +153,7 @@ class _PublishPageState extends State<PublishPage> {
         // 模组切换 chips + 草稿状态
         Wrap(
           spacing: 8,
+          runSpacing: 8,
           children: [
             for (final m in state.mods)
               ChoiceChip(
@@ -159,6 +161,16 @@ class _PublishPageState extends State<PublishPage> {
                 selected: m.path == mod.path,
                 onSelected: (_) => state.select(m),
               ),
+            ActionChip(
+              avatar: const Icon(Icons.folder_open, size: 16),
+              label: const Text('其他文件夹…'),
+              onPressed: () async {
+                final dir = await getDirectoryPath();
+                if (dir == null) return;
+                final m = await state.addExternalFolder(dir);
+                if (m != null) state.select(m);
+              },
+            ),
           ],
         ),
         Padding(

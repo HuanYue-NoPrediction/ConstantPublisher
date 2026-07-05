@@ -171,6 +171,22 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 加载 mods 目录之外的模组文件夹(发布页「其他文件夹」/工坊行更新时用)。
+  Future<Mod?> addExternalFolder(String dir) async {
+    final existing = mods.where((m) => m.path == dir).firstOrNull;
+    if (existing != null) return existing;
+    final mod = await Mod.load(Directory(dir));
+    if (mod == null) {
+      log(LogLevel.error, '$dir 里没有有效的 modinfo.lua,无法作为模组文件夹');
+      return null;
+    }
+    mods.add(mod);
+    mods.sort((a, b) => a.info.name.compareTo(b.info.name));
+    log(LogLevel.info, '已加入外部文件夹 ${mod.folderName}/(${mod.info.name})');
+    notifyListeners();
+    return mod;
+  }
+
   void selectAndGoPublish(Mod mod) {
     current = mod;
     navIndex = 3; // 发布页
