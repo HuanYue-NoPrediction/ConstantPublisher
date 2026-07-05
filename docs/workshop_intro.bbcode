@@ -1,0 +1,47 @@
+[h1]DST Mod Publisher · 饥荒模组发布器[/h1]
+
+[b]给饥荒模组作者的现代化发布工具 —— 开着 Steam 就能用,替代官方 ModUploader。[/b]
+
+[hr][/hr]
+
+[h2]为什么做这个[/h2]
+官方上传器的痛,写模组的都懂:
+[list]
+[*]上传失败,辛苦编辑的简介和说明[b]全部清空[/b]
+[*]整个文件夹无脑全传,.git、PSD 源文件、备份包全上了工坊
+[*]简介只有一个裸文本框,BBCode 全靠盲写
+[*]没有更新日志,订阅者永远不知道你改了什么
+[*]版本号要手动改 modinfo.lua,忘了就静默失败
+[*]报错只给一个数字,EResult 25 是什么意思自己猜
+[/list]
+
+[h2]这个工具怎么解决[/h2]
+[list]
+[*][b]零配置[/b] —— Steam 客户端开着、账号拥有饥荒,解压双击就能用。不输账号、不输密码、不装任何依赖(与官方工具同款 Steamworks 机制)
+[*][b]草稿自动保存[/b] —— 所有编辑内容边写边存,上传失败原样保留,修好直接重试
+[*][b]BBCode 编辑器[/b] —— 工具栏 + 实时预览,更新老模组时自动拉取工坊现有简介作底稿
+[*][b]更新日志[/b] —— 每次更新可写 changenote,进入 Steam 官方「更新记录」
+[*][b]干净上传[/b] —— 默认忽略 .git / exported / 源文件 / 压缩包 / exe,上传前可视化文件清单,支持 .modignore 自定义规则
+[*][b]版本自动化[/b] —— 一键自增并写回 modinfo.lua,自动维护工坊 version: 标签,更新前强制校验"必须大于线上版本"
+[*][b]名下条目管理[/b] —— 封面、订阅、收藏、评论数、好评率一屏看全,按工坊标签多选筛选,一键跳转评论区
+[*][b]目标与内容分离[/b] —— 发布目标(某个工坊条目/新建)和内容文件夹各选各的,换机器、换文件夹更新老条目毫无障碍
+[*][b]报错说人话[/b] —— EResult 错误码自动翻译并给出解决建议
+[*][b]现代界面[/b] —— Material You 设计,深色模式,14 种主题色
+[/list]
+
+[h2]三步开始[/h2]
+[olist]
+[*]下载发行包解压,确保 Steam 客户端已登录
+[*]双击 dst_mod_publisher.exe,在「设置」选择你的 mods 目录
+[*]工坊页点「更新」或发布页选文件夹 → 填版本和日志 → 发布
+[/olist]
+
+[h2]开源与下载[/h2]
+[list]
+[*]完全开源(GPL-3.0):[url=https://github.com/HuanYue-NoPrediction/ConstantPublisher]GitHub 仓库[/url](Releases 页下载最新版)
+[*]双引擎:桌面默认 Steamworks;另备 steamcmd 引擎供 CI / 无桌面环境自动化
+[/list]
+
+[hr][/hr]
+
+[i]本工具为社区作品,与 Klei Entertainment / Valve 无关。Don't Starve 是 Klei Entertainment 的商标,Steam 是 Valve 的商标。上传期间 Steam 可能显示"正在玩 Don't Starve Together",属 Steamworks 接入的正常现象。[/i]
