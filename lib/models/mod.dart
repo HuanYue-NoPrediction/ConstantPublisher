@@ -10,6 +10,8 @@ class ModInfo {
   final String version;
   final String description;
   final String apiVersion;
+  final bool clientOnly;
+  final bool serverOnly;
 
   const ModInfo({
     this.name = '',
@@ -17,9 +19,18 @@ class ModInfo {
     this.version = '',
     this.description = '',
     this.apiVersion = '',
+    this.clientOnly = false,
+    this.serverOnly = false,
   });
 
   bool get valid => name.isNotEmpty && version.isNotEmpty;
+
+  /// DST 类型标签:官方工具据 modinfo 布尔位生成,决定 mod 需装在客户端还是服务器。
+  String get typeTag => clientOnly
+      ? 'client_only_mod'
+      : serverOnly
+          ? 'server_only_mod'
+          : 'all_clients_require_mod';
 
   /// 宽松解析:匹配 `key = "value"` / `key = 'value'` / `key = [[value]]`。
   static ModInfo parse(String lua) {
@@ -36,12 +47,17 @@ class ModInfo {
       return num?.group(1) ?? '';
     }
 
+    bool flag(String key) =>
+        RegExp('$key\\s*=\\s*true', caseSensitive: false).hasMatch(lua);
+
     return ModInfo(
       name: field('name'),
       author: field('author'),
       version: field('version'),
       description: field('description'),
       apiVersion: field('api_version'),
+      clientOnly: flag('client_only_mod'),
+      serverOnly: flag('server_only_mod'),
     );
   }
 }

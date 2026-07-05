@@ -285,6 +285,18 @@ class AppState extends ChangeNotifier {
         preview = pv.path;
       }
 
+      // 稳健拼接标签,避免 SetItemTags 整体替换时丢失功能性标签:
+      // ① 从 modinfo 派生 DST 类型标签(client_only_mod 等,和官方工具一致)
+      // ② 并入工坊现有分类标签(去掉 version:,它由 helper 注入)
+      // ③ 并入用户在发布页编辑的标签
+      final tagSet = <String>{mod.info.typeTag, ...tags};
+      final rt =
+          remoteItems.where((x) => x.id == targetId).firstOrNull;
+      if (rt != null) {
+        tagSet.addAll(rt.tags.where((t) => !t.startsWith('version:')));
+      }
+      tagSet.removeWhere((t) => t.startsWith('version:'));
+
       final req = PublishRequest(
         appId: mod.pub.appId,
         publishedFileId: targetId,
@@ -294,7 +306,7 @@ class AppState extends ChangeNotifier {
         description: description,
         changeNote: changeNote,
         visibility: visibility,
-        tags: tags,
+        tags: tagSet.toList(),
         version: version,
       );
       final Stream<PublishEvent> events = engine == 'steamworks'
