@@ -8,13 +8,49 @@ const Map<String, Color> kSeeds = {
   'clay': Color(0xFF8F4C38),
 };
 
+/// Win11 的可变光学字体:正文用 Text 视觉,大标题用 Display 视觉(更秀气),
+/// 中文回退雅黑;都不存在时退回 Flutter 自带 Roboto,不会出错。
+const String _bodyFont = 'Segoe UI Variable Text';
+const String _displayFont = 'Segoe UI Variable Display';
+const List<String> _fallback = [
+  'Segoe UI',
+  'Microsoft YaHei UI',
+  'Microsoft YaHei',
+  'PingFang SC',
+];
+
 ThemeData buildTheme(String seedKey, Brightness brightness) {
   final seed = kSeeds[seedKey] ?? kSeeds['purple']!;
   final scheme = ColorScheme.fromSeed(seedColor: seed, brightness: brightness);
-  return ThemeData(
+  // 全局默认正文字体(含内联 TextStyle 继承)
+  final base = ThemeData(
     useMaterial3: true,
     colorScheme: scheme,
+    fontFamily: _bodyFont,
+    fontFamilyFallback: _fallback,
+  );
+
+  // 大字号标题:改用 Display 光学字体 + 更细字重 + 收紧字距,去掉粗犷感
+  TextStyle? display(TextStyle? s, FontWeight weight) => s?.copyWith(
+        fontFamily: _displayFont,
+        fontFamilyFallback: _fallback,
+        fontWeight: weight,
+        letterSpacing: -0.2,
+      );
+  final t = base.textTheme;
+  final tt = t.copyWith(
+    displayLarge: display(t.displayLarge, FontWeight.w300),
+    displayMedium: display(t.displayMedium, FontWeight.w300),
+    displaySmall: display(t.displaySmall, FontWeight.w300),
+    headlineLarge: display(t.headlineLarge, FontWeight.w300),
+    headlineMedium: display(t.headlineMedium, FontWeight.w300),
+    headlineSmall: display(t.headlineSmall, FontWeight.w300),
+    titleLarge: display(t.titleLarge, FontWeight.w400),
+  );
+
+  return base.copyWith(
     scaffoldBackgroundColor: scheme.surface,
+    textTheme: tt,
     cardTheme: CardThemeData(
       elevation: 0,
       color: scheme.surfaceContainerLow,

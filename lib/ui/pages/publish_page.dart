@@ -174,9 +174,7 @@ class _PublishPageState extends State<PublishPage> {
       padding: const EdgeInsets.fromLTRB(24, 18, 24, 32),
       children: [
         Text('发布', style: Theme.of(context).textTheme.headlineSmall),
-        Text('先选发布目标(新建或某个工坊条目),再选内容文件夹 —— 两者独立,像官方工具一样',
-            style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant)),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
         // 发布目标
         DropdownButtonFormField<String>(
           initialValue: targetId ?? '__new__',
@@ -312,7 +310,6 @@ class _PublishPageState extends State<PublishPage> {
       children: [
         SectionCard(
           title: '版本',
-          subtitle: '自动写回 modinfo.lua 的 version 字段',
           child: Row(
             children: [
               SizedBox(
@@ -360,7 +357,7 @@ class _PublishPageState extends State<PublishPage> {
         const SizedBox(height: 14),
         SectionCard(
           title: '发布通道',
-          subtitle: '由版本号自动判定(含 beta/rc/alpha 字样时切换),可手动覆盖 —— 映射为工坊标签',
+          subtitle: '由版本号自动判定,可手动覆盖',
           child: SegmentedButton<String>(
             segments: const [
               ButtonSegment(value: 'release', label: Text('正式版')),
@@ -379,8 +376,8 @@ class _PublishPageState extends State<PublishPage> {
         ),
         const SizedBox(height: 14),
         SectionCard(
-          title: '简介(工坊详情页)',
-          subtitle: 'BBCode 排版,写入 SetItemDescription —— 与更新日志是两回事',
+          title: '简介',
+          subtitle: '工坊详情页正文 · 支持 BBCode',
           trailing: SegmentedButton<bool>(
             style: const ButtonStyle(
                 visualDensity: VisualDensity.compact),
@@ -436,7 +433,7 @@ class _PublishPageState extends State<PublishPage> {
         const SizedBox(height: 14),
         SectionCard(
           title: '更新日志',
-          subtitle: '随 SubmitItemUpdate 写入 Steam「更新记录」,订阅者可见 —— 官方工具没有',
+          subtitle: '写入工坊更新记录,订阅者可见',
           child: TextField(
             controller: _noteCtrl,
             onChanged: (_) => _saveDraftSoon(),
@@ -450,7 +447,6 @@ class _PublishPageState extends State<PublishPage> {
         const SizedBox(height: 14),
         SectionCard(
           title: '可见性',
-          subtitle: 'ERemoteStoragePublishedFileVisibility',
           child: SegmentedButton<int>(
             segments: const [
               ButtonSegment(value: 0, label: Text('公开')),
@@ -468,7 +464,6 @@ class _PublishPageState extends State<PublishPage> {
         const SizedBox(height: 14),
         SectionCard(
           title: '标签',
-          subtitle: 'Steamworks 引擎走 SetItemTags,可靠生效;steamcmd 引擎下不保证',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -566,7 +561,7 @@ class _PublishPageState extends State<PublishPage> {
       children: [
         SectionCard(
           title: '预览图',
-          subtitle: '工坊封面 · JPG/PNG/GIF · 需小于 1 MB',
+          subtitle: 'JPG/PNG/GIF · 小于 1 MB',
           trailing: TextButton(
             onPressed: () => _pickPreview(mod),
             child: const Text('更换…'),
@@ -681,7 +676,7 @@ class _PublishPageState extends State<PublishPage> {
         const SizedBox(height: 14),
         SectionCard(
           title: '将要上传',
-          subtitle: '干净暂存副本 · .modignore 与默认规则已生效',
+          subtitle: '已应用忽略规则',
           trailing: IconButton(
             tooltip: '重新扫描',
             icon: const Icon(Icons.refresh, size: 18),

@@ -84,7 +84,6 @@ class _WorkshopPageState extends State<WorkshopPage> {
         const SizedBox(height: 16),
         SectionCard(
           title: '账号名下条目',
-          subtitle: 'Steamworks 引擎下零配置直查(开着 Steam 即可);steamcmd 引擎才需要 Web API Key',
           child: state.remoteItems.isEmpty
               ? Text('尚未拉取,或未配置 API Key',
                   style: TextStyle(color: scheme.onSurfaceVariant))

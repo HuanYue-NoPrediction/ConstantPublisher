@@ -20,8 +20,6 @@ class DashboardPage extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(24, 18, 24, 32),
       children: [
         Text('仪表盘', style: Theme.of(context).textTheme.headlineSmall),
-        Text('Steam 工坊发布环境一览',
-            style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant)),
         const SizedBox(height: 18),
         // 环境状态卡
         SectionCard(
@@ -49,7 +47,6 @@ class DashboardPage extends StatelessWidget {
         const SizedBox(height: 14),
         SectionCard(
           title: '快速开始',
-          subtitle: '发布目标与内容文件夹在发布页各自选择,无需预先绑定',
           child: Row(
             children: [
               FilledButton.tonalIcon(
