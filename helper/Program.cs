@@ -235,6 +235,8 @@ internal static class Program
                     EItemStatistic.k_EItemStatistic_NumSubscriptions, out subs);
                 SteamUGC.GetQueryUGCMetadata(_queryResult.m_handle, i,
                     out string meta, Constants.k_cchDeveloperMetadataMax);
+                SteamUGC.GetQueryUGCPreviewURL(_queryResult.m_handle, i,
+                    out string previewUrl, 1024);
                 Emit(new
                 {
                     @event = "item",
@@ -245,6 +247,7 @@ internal static class Program
                     visibility = (int)d.m_eVisibility,
                     tags = d.m_rgchTags, // 逗号分隔的工坊标签
                     meta, // 本工具发布时写入的版本号(老条目为空)
+                    preview = previewUrl, // 封面图 CDN 直链
                 });
                 total++;
             }

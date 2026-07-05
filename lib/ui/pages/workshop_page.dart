@@ -190,7 +190,37 @@ extension on _WorkshopPageState {
       padding: const EdgeInsets.symmetric(vertical: 7),
       child: Row(
         children: [
-          Icon(Icons.cloud_outlined, size: 20, color: scheme.onSurfaceVariant),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: it.previewUrl.isEmpty
+                ? Container(
+                    width: 44,
+                    height: 44,
+                    color: scheme.surfaceContainerHighest,
+                    child: Icon(Icons.cloud_outlined,
+                        size: 20, color: scheme.onSurfaceVariant),
+                  )
+                : Image.network(
+                    it.previewUrl,
+                    width: 44,
+                    height: 44,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (c, child, prog) => prog == null
+                        ? child
+                        : Container(
+                            width: 44,
+                            height: 44,
+                            color: scheme.surfaceContainerHighest,
+                          ),
+                    errorBuilder: (_, __, ___) => Container(
+                      width: 44,
+                      height: 44,
+                      color: scheme.surfaceContainerHighest,
+                      child: Icon(Icons.cloud_off_outlined,
+                          size: 18, color: scheme.onSurfaceVariant),
+                    ),
+                  ),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

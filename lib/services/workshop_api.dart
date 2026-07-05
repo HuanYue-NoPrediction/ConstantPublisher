@@ -14,6 +14,9 @@ class WorkshopItemRemote {
   /// 工坊版本号:来自条目 metadata(本工具发布时写入;老条目为空)。
   final String version;
 
+  /// 工坊封面图 CDN 直链(可能为空)。
+  final String previewUrl;
+
   const WorkshopItemRemote({
     required this.id,
     required this.title,
@@ -21,6 +24,7 @@ class WorkshopItemRemote {
     this.updated,
     this.tags = const [],
     this.version = '',
+    this.previewUrl = '',
   });
 }
 
@@ -71,6 +75,7 @@ Future<List<WorkshopItemRemote>> fetchUserItems({
                 .where((t) => t.isNotEmpty)
                 .toList() ??
             const [],
+        previewUrl: m['preview_url'] as String? ?? '',
       );
     }).toList();
   } finally {

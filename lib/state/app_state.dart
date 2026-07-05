@@ -378,6 +378,7 @@ class AppState extends ChangeNotifier {
                     .where((t) => t.isNotEmpty)
                     .toList(),
                 version: versionFromMeta(j['meta'] as String?),
+                previewUrl: j['preview'] as String? ?? '',
               ));
             } else if (j['event'] == 'result') {
               ok = j['ok'] == true;
