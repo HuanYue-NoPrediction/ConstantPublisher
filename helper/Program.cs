@@ -193,12 +193,14 @@ internal static class Program
         var total = 0;
         while (page <= 10)
         {
+            // nCreatorAppID 必须给 0(不限):经官方 ModUploader 上传的老模组,
+            // 创建者 App 是 "Don't Starve Mod Tools" 而非游戏本身,按游戏过滤会全部漏掉
             var q = SteamUGC.CreateQueryUserUGCRequest(
                 account,
                 EUserUGCList.k_EUserUGCList_Published,
                 EUGCMatchingUGCType.k_EUGCMatchingUGCType_Items,
                 EUserUGCListSortOrder.k_EUserUGCListSortOrder_LastUpdatedDesc,
-                appId, appId, page);
+                new AppId_t(0), appId, page);
             _queryDone = false;
             var cr = CallResult<SteamUGCQueryCompleted_t>.Create(OnQuery);
             cr.Set(SteamUGC.SendQueryUGCRequest(q));
