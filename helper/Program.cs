@@ -38,6 +38,11 @@ internal static class Program
     private static CallResult<SubmitItemUpdateResult_t>? _submitCR;
     private static CallResult<SteamUGCQueryCompleted_t>? _queryCR;
 
+    // 以 "Don't Starve Mod Tools"(245850)的身份接入 Steam —— 官方 ModUploader 就是这样:
+    // 它由 Steam 以此 app 启动,再对游戏(322330 等)建/更新工坊条目。
+    // 直接以游戏 appid 初始化会被 Steam 拒绝(游戏不能自我发布),导致 CreateItem 回调永不返回。
+    private const uint LaunchAppId = 245850;
+
     private static void Emit(object o) =>
         Console.WriteLine(JsonSerializer.Serialize(o));
 
@@ -48,13 +53,33 @@ internal static class Program
     {
         Console.OutputEncoding = new UTF8Encoding(false);
 
+        // 模式三:delete <publishedfileid> —— 删除工坊条目
+        if (args.Length >= 2 && args[0] == "delete")
+        {
+            Environment.SetEnvironmentVariable("SteamAppId", LaunchAppId.ToString());
+            Environment.SetEnvironmentVariable("SteamGameId", LaunchAppId.ToString());
+            if (!TryInit(LaunchAppId)) return 0;
+            try
+            {
+                var id = ulong.Parse(args[1]);
+                SteamUGC.DeleteItem(new PublishedFileId_t(id));
+                // DeleteItem 是异步的,但对我们只需发出即可;短暂 pump 让请求送达
+                for (var k = 0; k < 20; k++) { SteamAPI.RunCallbacks(); Thread.Sleep(100); }
+                Emit(new { @event = "result", ok = true, deleted = args[1] });
+            }
+            catch (Exception e) { Fail("删除失败: " + e.Message); }
+            finally { SteamAPI.Shutdown(); }
+            return 0;
+        }
+
         // 模式二:list <appid> —— 借 Steam 会话列出当前账号名下的工坊条目,零配置
         if (args.Length >= 1 && args[0] == "list")
         {
             var listAppId = args.Length >= 2 && uint.TryParse(args[1], out var a) ? a : 322330u;
-            Environment.SetEnvironmentVariable("SteamAppId", listAppId.ToString());
-            Environment.SetEnvironmentVariable("SteamGameId", listAppId.ToString());
-            if (!TryInit(listAppId)) return 0;
+            // 以 Mod Tools 身份初始化,查询目标仍是游戏 appid
+            Environment.SetEnvironmentVariable("SteamAppId", LaunchAppId.ToString());
+            Environment.SetEnvironmentVariable("SteamGameId", LaunchAppId.ToString());
+            if (!TryInit(LaunchAppId)) return 0;
             try
             {
                 return RunList(new AppId_t(listAppId));
@@ -89,12 +114,12 @@ internal static class Program
             return 1;
         }
 
-        // 以目标游戏的身份接入 Steam(要求当前账号拥有该游戏)。
+        // 以 Mod Tools(245850)身份接入 Steam;发布目标游戏见 req.AppId。
         // 必须在 Init 之前设置,替代 steam_appid.txt。
-        Environment.SetEnvironmentVariable("SteamAppId", req.AppId.ToString());
-        Environment.SetEnvironmentVariable("SteamGameId", req.AppId.ToString());
+        Environment.SetEnvironmentVariable("SteamAppId", LaunchAppId.ToString());
+        Environment.SetEnvironmentVariable("SteamGameId", LaunchAppId.ToString());
 
-        if (!TryInit(req.AppId)) return 0;
+        if (!TryInit(LaunchAppId)) return 0;
 
         try
         {
@@ -120,11 +145,16 @@ internal static class Program
         {
             Emit(new { @event = "stage", stage = "CreateItem · 新建工坊条目" });
             var call = SteamUGC.CreateItem(appId, EWorkshopFileType.k_EWorkshopFileTypeCommunity);
+            if (call.m_SteamAPICall == 0)
+            {
+                Fail("CreateItem 被 Steam 拒绝 —— 确认 Steam 在线、账号拥有饥荒,且 helper 旁的 steam_api64.dll 与 Steamworks.NET 版本匹配", 0);
+                return 0;
+            }
             _createCR = CallResult<CreateItemResult_t>.Create(OnCreateItem);
             _createCR.Set(call);
             if (!Pump(() => _createDone, 60))
             {
-                Fail("CreateItem 超时(60 秒)");
+                Fail("CreateItem 超时(60 秒)", 0);
                 return 0;
             }
             if (_ioFailure || _createResult.m_eResult != EResult.k_EResultOK)
