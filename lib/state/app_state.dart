@@ -285,16 +285,10 @@ class AppState extends ChangeNotifier {
         preview = pv.path;
       }
 
-      // 稳健拼接标签,避免 SetItemTags 整体替换时丢失功能性标签:
-      // ① 从 modinfo 派生 DST 类型标签(client_only_mod 等,和官方工具一致)
-      // ② 并入工坊现有分类标签(去掉 version:,它由 helper 注入)
-      // ③ 并入用户在发布页编辑的标签
+      // 标签 = 类型标签(modinfo 派生)+ 发布页里的用户标签;
+      // version: 由 helper 注入。UI 已从远端种子标签,故不再并入远端
+      // ——否则用户删掉的标签会在发布时复活
       final tagSet = <String>{mod.info.typeTag, ...tags};
-      final rt =
-          remoteItems.where((x) => x.id == targetId).firstOrNull;
-      if (rt != null) {
-        tagSet.addAll(rt.tags.where((t) => !t.startsWith('version:')));
-      }
       tagSet.removeWhere((t) => t.startsWith('version:'));
 
       final req = PublishRequest(
@@ -333,7 +327,7 @@ class AppState extends ChangeNotifier {
           (newId != null && newId.isNotEmpty) ? newId : targetId;
       // 只持久化内容设置(可见性/标签);发布目标是会话态,不写入文件夹
       mod.pub.visibility = visibility;
-      mod.pub.tags = List.of(tags);
+      mod.pub.tags = List.of(tags); // 类型/版本标签每次发布自动生成,不落盘
       await mod.savePub();
       publishTargetId = resultId; // 会话内:新建后再次发布即更新该条目
       log(LogLevel.info,

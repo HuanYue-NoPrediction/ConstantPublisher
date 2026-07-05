@@ -11,6 +11,8 @@ const List<String> kDefaultIgnore = [
   '*.psd', '*.aseprite', '*.xcf',
   '*.zip', '*.rar', '*.7z',
   '*.bak', '*.tmp',
+  '*.exe', '*.dll', '*.pdb', // 工坊会拒收可执行文件
+
   'Thumbs.db', 'desktop.ini',
   'dstpub.json', '.modignore',
 ];
