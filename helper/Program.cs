@@ -245,14 +245,20 @@ internal static class Program
         var total = 0;
         while (page <= 10)
         {
-            // nCreatorAppID 必须给 0(不限):经官方 ModUploader 上传的老模组,
-            // 创建者 App 是 "Don't Starve Mod Tools" 而非游戏本身,按游戏过滤会全部漏掉
+            // creator = Mod Tools(245850,即上传者身份),consumer = 目标游戏。
+            // 以 245850 运行时,若 creator/consumer 都不是 245850(如都填 322330),
+            // 或 creator=0,v017 的 dll 会返回无效查询句柄 → 回调永不返回。
             var q = SteamUGC.CreateQueryUserUGCRequest(
                 account,
                 EUserUGCList.k_EUserUGCList_Published,
                 EUGCMatchingUGCType.k_EUGCMatchingUGCType_Items,
                 EUserUGCListSortOrder.k_EUserUGCListSortOrder_LastUpdatedDesc,
-                new AppId_t(0), appId, page);
+                new AppId_t(LaunchAppId), appId, page);
+            if (q.m_UGCQueryHandle == ulong.MaxValue) // k_UGCQueryHandleInvalid
+            {
+                Fail("CreateQueryUserUGCRequest 返回无效句柄");
+                return 0;
+            }
             SteamUGC.SetReturnMetadata(q, true);
             SteamUGC.SetReturnLongDescription(q, true);
             _queryDone = false;
