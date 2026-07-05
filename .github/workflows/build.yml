@@ -33,10 +33,13 @@ jobs:
       - name: 构建 Steamworks 助手(C#,自包含单文件)
         run: dotnet publish helper/CpSteamHelper.csproj -c Release -o helper_out
 
-      - name: 合并助手到发布目录
+      - name: 合并助手到发布目录(含 Valve 原生库)
         run: |
           New-Item -ItemType Directory -Force build/windows/x64/runner/Release/helper | Out-Null
           Copy-Item helper_out/* build/windows/x64/runner/Release/helper -Recurse -Force
+          # 显式拷贝 steam_api64.dll —— 单文件 publish 不保证带出它,必须确定性放置
+          Copy-Item helper/native/steam_api64.dll build/windows/x64/runner/Release/helper/ -Force
+          if (-not (Test-Path build/windows/x64/runner/Release/helper/steam_api64.dll)) { throw 'steam_api64.dll 缺失!' }
 
       - name: 打包
         run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath ConstantPublisher-windows.zip
