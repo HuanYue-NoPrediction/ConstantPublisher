@@ -234,6 +234,7 @@ internal static class Program
                     subs,
                     updated = d.m_rtimeUpdated,
                     visibility = (int)d.m_eVisibility,
+                    tags = d.m_rgchTags, // 逗号分隔的工坊标签
                 });
                 total++;
             }

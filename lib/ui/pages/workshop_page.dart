@@ -17,6 +17,7 @@ class WorkshopPage extends StatefulWidget {
 
 class _WorkshopPageState extends State<WorkshopPage> {
   var _autoFetched = false;
+  String? _tagFilter;
 
   @override
   void didChangeDependencies() {
@@ -38,6 +39,24 @@ class _WorkshopPageState extends State<WorkshopPage> {
     final state = context.watch<AppState>();
     final scheme = Theme.of(context).colorScheme;
     final linked = state.mods.where((m) => m.linked).toList();
+
+    // 标签统计与筛选(像 Steam 工坊侧边栏那样)
+    final tagCounts = <String, int>{};
+    for (final it in state.remoteItems) {
+      for (final t in it.tags) {
+        tagCounts[t] = (tagCounts[t] ?? 0) + 1;
+      }
+    }
+    if (_tagFilter != null && !tagCounts.containsKey(_tagFilter)) {
+      _tagFilter = null;
+    }
+    final sortedTags = tagCounts.keys.toList()
+      ..sort((a, b) => tagCounts[b]!.compareTo(tagCounts[a]!));
+    final filteredRemote = _tagFilter == null
+        ? state.remoteItems
+        : state.remoteItems
+            .where((it) => it.tags.contains(_tagFilter))
+            .toList();
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 18, 24, 32),
@@ -115,8 +134,31 @@ class _WorkshopPageState extends State<WorkshopPage> {
               ? Text('尚未拉取,或未配置 API Key',
                   style: TextStyle(color: scheme.onSurfaceVariant))
               : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (final it in state.remoteItems)
+                    if (sortedTags.isNotEmpty) ...[
+                      Wrap(
+                        spacing: 7,
+                        runSpacing: 7,
+                        children: [
+                          FilterChip(
+                            label: Text('全部 (${state.remoteItems.length})'),
+                            selected: _tagFilter == null,
+                            onSelected: (_) =>
+                                setState(() => _tagFilter = null),
+                          ),
+                          for (final t in sortedTags)
+                            FilterChip(
+                              label: Text('$t (${tagCounts[t]})'),
+                              selected: _tagFilter == t,
+                              onSelected: (_) => setState(() =>
+                                  _tagFilter = _tagFilter == t ? null : t),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    for (final it in filteredRemote)
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: const Icon(Icons.cloud_outlined),

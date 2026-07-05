@@ -353,6 +353,11 @@ class AppState extends ChangeNotifier {
                     ? DateTime.fromMillisecondsSinceEpoch(
                         (j['updated'] as num).toInt() * 1000)
                     : null,
+                tags: (j['tags'] as String? ?? '')
+                    .split(',')
+                    .map((t) => t.trim())
+                    .where((t) => t.isNotEmpty)
+                    .toList(),
               ));
             } else if (j['event'] == 'result') {
               ok = j['ok'] == true;

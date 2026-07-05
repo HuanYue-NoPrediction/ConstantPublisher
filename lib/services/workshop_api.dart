@@ -9,12 +9,14 @@ class WorkshopItemRemote {
   final String title;
   final int subs;
   final DateTime? updated;
+  final List<String> tags;
 
   const WorkshopItemRemote({
     required this.id,
     required this.title,
     required this.subs,
     this.updated,
+    this.tags = const [],
   });
 }
 
@@ -30,6 +32,7 @@ Future<List<WorkshopItemRemote>> fetchUserItems({
     'appid': '$appId',
     'numperpage': '100',
     'return_details': 'true',
+    'return_tags': 'true',
   });
 
   final client = HttpClient();
@@ -53,6 +56,11 @@ Future<List<WorkshopItemRemote>> fetchUserItems({
             ? DateTime.fromMillisecondsSinceEpoch(
                 (m['time_updated'] as num).toInt() * 1000)
             : null,
+        tags: (m['tags'] as List?)
+                ?.map((t) => '${(t as Map)['tag']}')
+                .where((t) => t.isNotEmpty)
+                .toList() ??
+            const [],
       );
     }).toList();
   } finally {
