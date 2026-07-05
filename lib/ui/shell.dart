@@ -5,7 +5,6 @@ import 'package:window_manager/window_manager.dart';
 import '../state/app_state.dart';
 import 'pages/dashboard_page.dart';
 import 'pages/logs_page.dart';
-import 'pages/mods_page.dart';
 import 'pages/publish_page.dart';
 import 'pages/settings_page.dart';
 import 'pages/workshop_page.dart';
@@ -19,7 +18,6 @@ class Shell extends StatelessWidget {
     final state = context.watch<AppState>();
     const pages = [
       DashboardPage(),
-      ModsPage(),
       WorkshopPage(),
       PublishPage(),
       LogsPage(),
@@ -42,10 +40,6 @@ class Shell extends StatelessWidget {
                         icon: Icon(Icons.dashboard_outlined),
                         selectedIcon: Icon(Icons.dashboard),
                         label: Text('仪表盘')),
-                    NavigationRailDestination(
-                        icon: Icon(Icons.inventory_2_outlined),
-                        selectedIcon: Icon(Icons.inventory_2),
-                        label: Text('模组')),
                     NavigationRailDestination(
                         icon: Icon(Icons.public_outlined),
                         selectedIcon: Icon(Icons.public),

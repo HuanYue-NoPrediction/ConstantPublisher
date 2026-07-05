@@ -193,48 +193,18 @@ class AppState extends ChangeNotifier {
     return mod;
   }
 
+  static const int publishPageIndex = 2; // 导航:仪表盘0/工坊1/发布2/日志3/设置4
+
   /// 发起一次发布:内容文件夹与目标条目相互独立,任一为空则保留当前值。
   void startPublish({Mod? content, String? targetId, bool goto = true}) {
     if (content != null) current = content;
     publishTargetId = targetId;
-    if (goto) navIndex = 3;
+    if (goto) navIndex = publishPageIndex;
     notifyListeners();
   }
 
   void setPublishTarget(String? id) {
     publishTargetId = id;
-    notifyListeners();
-  }
-
-  /// 从某内容文件夹发起发布:有历史条目则默认更新它,否则新建。
-  void selectAndGoPublish(Mod mod) {
-    startPublish(content: mod, targetId: mod.pub.publishedFileId);
-  }
-
-  /// 把工坊条目 id 绑定到任意本地文件夹 —— "新建文件夹更新老条目"走这里。
-  Future<void> bindItem(Mod mod, String publishedFileId,
-      {String? knownVersion}) async {
-    for (final other in mods) {
-      if (other != mod && other.pub.publishedFileId == publishedFileId) {
-        other.pub.publishedFileId = null;
-        other.pub.lastPublishedVersion = null;
-        await other.savePub();
-        log(LogLevel.info, '已解除 ${other.folderName}/ 对条目 $publishedFileId 的旧绑定');
-      }
-    }
-    mod.pub.publishedFileId = publishedFileId;
-    if (knownVersion != null) mod.pub.lastPublishedVersion = knownVersion;
-    await mod.savePub();
-    log(LogLevel.info,
-        '已将 ${mod.folderName}/ 关联到工坊条目 $publishedFileId(写入 dstpub.json)');
-    notifyListeners();
-  }
-
-  Future<void> unbindItem(Mod mod) async {
-    mod.pub.publishedFileId = null;
-    mod.pub.lastPublishedVersion = null;
-    await mod.savePub();
-    log(LogLevel.info, '已解除 ${mod.folderName}/ 的工坊绑定');
     notifyListeners();
   }
 
@@ -349,13 +319,11 @@ class AppState extends ChangeNotifier {
 
       final resultId =
           (newId != null && newId.isNotEmpty) ? newId : targetId;
-      // 记住这次用的条目作为该文件夹下次的默认目标(仅便利,不构成隐藏耦合)
-      mod.pub.publishedFileId = resultId;
-      mod.pub.lastPublishedVersion = version;
+      // 只持久化内容设置(可见性/标签);发布目标是会话态,不写入文件夹
       mod.pub.visibility = visibility;
       mod.pub.tags = List.of(tags);
       await mod.savePub();
-      publishTargetId = resultId;
+      publishTargetId = resultId; // 会话内:新建后再次发布即更新该条目
       log(LogLevel.info,
           '✔ 已发布 ${mod.info.name} v$version(条目 ${resultId ?? '?'})· 更新记录已写入');
       unawaited(refreshRemote()); // 刷新列表,新版本/新条目立即反映

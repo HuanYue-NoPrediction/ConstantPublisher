@@ -46,19 +46,15 @@ class ModInfo {
   }
 }
 
-/// dstpub.json —— 本工具的真相源:条目 id、上次发布版本等,
-/// 存在模组文件夹里,可进版本库,不依赖 Steam 返回的列表。
+/// dstpub.json —— 模组文件夹的内容设置(目标游戏、可见性、标签、忽略规则)。
+/// 不再记录"发布到哪个工坊条目":发布目标每次在发布页显式选择。
 class DstPub {
-  String? publishedFileId;
-  String? lastPublishedVersion;
   int appId;
   int visibility; // 0 公开 / 1 好友 / 2 私密 / 3 不公开
   List<String> tags;
   List<String> ignore;
 
   DstPub({
-    this.publishedFileId,
-    this.lastPublishedVersion,
     this.appId = 322330,
     this.visibility = 0,
     List<String>? tags,
@@ -67,8 +63,6 @@ class DstPub {
         ignore = ignore ?? [];
 
   factory DstPub.fromJson(Map<String, dynamic> j) => DstPub(
-        publishedFileId: j['publishedfileid'] as String?,
-        lastPublishedVersion: j['last_published_version'] as String?,
         appId: (j['appid'] as num?)?.toInt() ?? 322330,
         visibility: (j['visibility'] as num?)?.toInt() ?? 0,
         tags: (j['tags'] as List?)?.cast<String>() ?? [],
@@ -76,8 +70,6 @@ class DstPub {
       );
 
   Map<String, dynamic> toJson() => {
-        'publishedfileid': publishedFileId,
-        'last_published_version': lastPublishedVersion,
         'appid': appId,
         'visibility': visibility,
         'tags': tags,
@@ -94,13 +86,6 @@ class Mod {
 
   String get path => dir.path;
   String get folderName => p.basename(dir.path);
-  bool get linked => pub.publishedFileId != null && pub.publishedFileId!.isNotEmpty;
-
-  /// 本地版本比上次发布的新(或从未发布)→ 需要发布。
-  bool get dirty =>
-      !linked ||
-      pub.lastPublishedVersion == null ||
-      cmpVer(info.version, pub.lastPublishedVersion!) > 0;
 
   File get modinfoFile => File(p.join(dir.path, 'modinfo.lua'));
   File get pubFile => File(p.join(dir.path, 'dstpub.json'));

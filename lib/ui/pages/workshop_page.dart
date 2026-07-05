@@ -147,11 +147,8 @@ extension on _WorkshopPageState {
   String _shortDate(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
-  /// 远端条目行:标题 + id 在左;订阅/时间/绑定状态用图标靠右;每行都可「更新」。
+  /// 远端条目行:封面 + 标题/id 在左;订阅/时间用图标靠右;每行都可「更新」。
   Widget _remoteRow(AppState state, ColorScheme scheme, WorkshopItemRemote it) {
-    final sem = SemanticColors.of(context);
-    final bound =
-        state.mods.where((m) => m.pub.publishedFileId == it.id).firstOrNull;
     final dim = TextStyle(fontSize: 12, color: scheme.onSurfaceVariant);
 
     return Padding(
@@ -228,17 +225,6 @@ extension on _WorkshopPageState {
             ),
           ],
           const SizedBox(width: 14),
-          Tooltip(
-            message: bound != null
-                ? '已绑定 ${bound.folderName}/'
-                : '未绑定本地文件夹(点「更新」时选择)',
-            child: Icon(
-              bound != null ? Icons.link : Icons.link_off,
-              size: 16,
-              color: bound != null ? sem.success : scheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(width: 10),
           FilledButton.tonal(
             style: FilledButton.styleFrom(
                 minimumSize: const Size(0, 34),
@@ -252,11 +238,8 @@ extension on _WorkshopPageState {
     );
   }
 
-  /// 更新:把该条目设为发布目标,内容文件夹默认沿用上次(或当前),到发布页再选。
+  /// 更新:把该条目设为发布目标,内容文件夹沿用当前(到发布页再选)。
   void _updateItem(AppState state, WorkshopItemRemote it) {
-    final guess =
-        state.mods.where((m) => m.pub.publishedFileId == it.id).firstOrNull ??
-            state.current;
-    state.startPublish(content: guess, targetId: it.id);
+    state.startPublish(content: state.current, targetId: it.id);
   }
 }

@@ -13,7 +13,8 @@ class DashboardPage extends StatelessWidget {
     final state = context.watch<AppState>();
     final scheme = Theme.of(context).colorScheme;
     final sem = SemanticColors.of(context);
-    final dirty = state.mods.where((m) => m.dirty).toList();
+    final totalSubs =
+        state.remoteItems.fold<int>(0, (a, it) => a + it.subs);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 18, 24, 32),
@@ -38,43 +39,32 @@ class DashboardPage extends StatelessWidget {
           ),
           child: Row(
             children: [
-              _Stat(label: '本地模组', value: '${state.mods.length}'),
+              _Stat(label: '本地文件夹', value: '${state.mods.length}'),
+              _Stat(label: '名下工坊条目', value: '${state.remoteItems.length}'),
               _Stat(
-                  label: '已关联工坊',
-                  value: '${state.mods.where((m) => m.linked).length}'),
-              _Stat(label: '待发布', value: '${dirty.length}'),
+                  label: '总订阅', value: '${totalSubs}'),
             ],
           ),
         ),
         const SizedBox(height: 14),
-        // 待发布列表
         SectionCard(
-          title: '待发布',
-          subtitle: '本地版本比上次发布新、或从未发布的模组',
-          child: dirty.isEmpty
-              ? Text('全部同步,无事可做 🎉',
-                  style: TextStyle(color: scheme.onSurfaceVariant))
-              : Column(
-                  children: [
-                    for (final m in dirty)
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(m.info.name.isEmpty
-                            ? m.folderName
-                            : m.info.name),
-                        subtitle: Text(
-                          m.linked
-                              ? '${m.pub.lastPublishedVersion ?? '?'} → ${m.info.version}'
-                              : '首次发布 · v${m.info.version}',
-                          style: const TextStyle(fontFamily: 'monospace'),
-                        ),
-                        trailing: FilledButton.tonal(
-                          onPressed: () => state.selectAndGoPublish(m),
-                          child: Text(m.linked ? '去发布' : '首次发布'),
-                        ),
-                      ),
-                  ],
-                ),
+          title: '快速开始',
+          subtitle: '发布目标与内容文件夹在发布页各自选择,无需预先绑定',
+          child: Row(
+            children: [
+              FilledButton.tonalIcon(
+                onPressed: () => state.goto(AppState.publishPageIndex),
+                icon: const Icon(Icons.upload),
+                label: const Text('去发布'),
+              ),
+              const SizedBox(width: 10),
+              OutlinedButton.icon(
+                onPressed: () => state.goto(1),
+                icon: const Icon(Icons.public),
+                label: const Text('查看名下条目'),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 14),
         if (state.busy && state.progress != null)
