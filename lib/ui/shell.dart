@@ -91,7 +91,7 @@ class _TitleBar extends StatelessWidget {
           const Text('DST Mod Publisher',
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           const SizedBox(width: 8),
-          Text('饥荒工坊上传器',
+          Text('饥荒模组发布器',
               style:
                   TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
           // 拖拽区

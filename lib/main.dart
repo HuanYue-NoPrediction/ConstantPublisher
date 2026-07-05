@@ -22,9 +22,12 @@ Future<void> main() async {
     await windowManager.focus();
   });
 
+  // 先读完主题等偏好再画首帧,消除"亮→暗"闪屏;慢活(扫描/拉取)在 init 内部后台进行
+  final state = AppState();
+  await state.init();
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => AppState()..init(),
+    ChangeNotifierProvider.value(
+      value: state,
       child: const App(),
     ),
   );

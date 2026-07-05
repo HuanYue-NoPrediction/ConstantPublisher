@@ -37,7 +37,7 @@ class AppState extends ChangeNotifier {
   String webApiKey = '';
   String steamId64 = '';
   String seed = 'purple';
-  ThemeMode themeMode = ThemeMode.system;
+  ThemeMode themeMode = ThemeMode.dark; // 与首帧一致,防启动白闪
 
   // ---------- 数据 ----------
   List<Mod> mods = [];
@@ -64,8 +64,12 @@ class AppState extends ChangeNotifier {
     seed = sp.getString('seed') ?? 'purple';
     // 首次启动(未存过偏好)默认深色
     themeMode = ThemeMode.values[sp.getInt('themeMode') ?? ThemeMode.dark.index];
-    if (modsDir.isNotEmpty) await scanMods();
     notifyListeners();
+    unawaited(_warmup()); // 磁盘扫描/远端拉取放后台,init 只负责快速读偏好
+  }
+
+  Future<void> _warmup() async {
+    if (modsDir.isNotEmpty) await scanMods();
     if (engine == 'steamworks' && steamReady) {
       // 后台预拉名下条目:发布页封面对比、工坊页、绑定下拉都依赖它
       unawaited(refreshRemote());
