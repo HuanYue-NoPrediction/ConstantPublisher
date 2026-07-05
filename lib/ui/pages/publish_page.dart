@@ -604,14 +604,17 @@ class _PublishPageState extends State<PublishPage> {
             ? 'preview.gif'
             : 'preview.jpg';
     final target = File(p.join(mod.path, name));
-    await File(f.path).copy(target.path);
-    // 删掉其他同名旧预览(否则会残留多份,mod.preview 取谁存疑)
-    for (final other in ['preview.jpg', 'preview.png', 'preview.gif']) {
-      if (other != name) {
-        final of = File(p.join(mod.path, other));
-        if (await of.exists()) await of.delete();
+    // 换图前先把现有预览备份到 .preview_backup/(绝不直接删除,防误伤)
+    final backupDir = Directory(p.join(mod.path, '.preview_backup'));
+    for (final old in ['preview.jpg', 'preview.png', 'preview.gif']) {
+      final of = File(p.join(mod.path, old));
+      if (await of.exists()) {
+        await backupDir.create(recursive: true);
+        final ts = DateTime.now().millisecondsSinceEpoch;
+        await of.rename(p.join(backupDir.path, '${ts}_$old'));
       }
     }
+    await File(f.path).copy(target.path);
     // 关键:Image.file 按路径缓存解码结果,同名替换后必须清缓存才会重画
     await FileImage(target).evict();
     if (mounted) {
