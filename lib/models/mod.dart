@@ -32,18 +32,24 @@ class ModInfo {
           ? 'server_only_mod'
           : 'all_clients_require_mod';
 
-  /// 宽松解析:匹配 `key = "value"` / `key = 'value'` / `key = [[value]]`。
+  /// 宽松解析:取 `key =` 之后的第一个字符串字面量,
+  /// 兼容饥荒标准双语写法 `key = chinese and "中文" or "English"`
+  /// (返回第一个 = 中文那份)以及 `[[长字符串]]`、纯数字。
   static ModInfo parse(String lua) {
     String field(String key) {
-      final quoted = RegExp(
-        '$key\\s*=\\s*("((?:[^"\\\\]|\\\\.)*)"|\'((?:[^\'\\\\]|\\\\.)*)\')',
-      ).firstMatch(lua);
-      if (quoted != null) return quoted.group(2) ?? quoted.group(3) ?? '';
-      final long =
-          RegExp('$key\\s*=\\s*\\[\\[([\\s\\S]*?)\\]\\]').firstMatch(lua);
-      if (long != null) return long.group(1) ?? '';
-      final num =
-          RegExp('$key\\s*=\\s*([0-9][0-9.]*)').firstMatch(lua);
+      // (?<![\w]) 词边界:找 version 时不会误命中 api_version
+      final at = RegExp('(?<![\\w])$key\\s*=').firstMatch(lua);
+      if (at == null) return '';
+      final rest = lua.substring(at.end);
+      final line = rest.split('\n').first;
+      // 同行内的第一个引号字符串(条件表达式里的第一个 = 中文值)
+      final q = RegExp('"((?:[^"\\\\]|\\\\.)*)"|\'((?:[^\'\\\\]|\\\\.)*)\'')
+          .firstMatch(line);
+      if (q != null) return q.group(1) ?? q.group(2) ?? '';
+      // [[长字符串]] 可跨行,从 key= 之后取第一个
+      final long = RegExp('\\[\\[([\\s\\S]*?)\\]\\]').firstMatch(rest);
+      if (long != null) return (long.group(1) ?? '').trim();
+      final num = RegExp('([0-9][0-9.]*)').firstMatch(line);
       return num?.group(1) ?? '';
     }
 
