@@ -62,8 +62,8 @@ class AppState extends ChangeNotifier {
     webApiKey = sp.getString('webApiKey') ?? '';
     steamId64 = sp.getString('steamId64') ?? '';
     seed = sp.getString('seed') ?? 'purple';
-    themeMode = ThemeMode
-        .values[sp.getInt('themeMode') ?? ThemeMode.system.index];
+    // 首次启动(未存过偏好)默认深色
+    themeMode = ThemeMode.values[sp.getInt('themeMode') ?? ThemeMode.dark.index];
     if (modsDir.isNotEmpty) await scanMods();
     notifyListeners();
     if (engine == 'steamworks' && steamReady) {

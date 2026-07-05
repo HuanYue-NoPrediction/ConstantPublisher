@@ -1,11 +1,39 @@
 import 'package:flutter/material.dart';
 
-/// 四组主题种子色,对应原型里的 紫 / 海蓝 / 松绿 / 陶土。
+/// 主题种子色 —— Material You 动态取色的基色,涵盖冷暖各色系。
 const Map<String, Color> kSeeds = {
-  'purple': Color(0xFF6750A4),
-  'blue': Color(0xFF415F91),
-  'green': Color(0xFF4C662B),
-  'clay': Color(0xFF8F4C38),
+  'purple': Color(0xFF6750A4), // 紫
+  'indigo': Color(0xFF4355B9), // 靛蓝
+  'blue': Color(0xFF415F91), // 海蓝
+  'cyan': Color(0xFF00696E), // 青
+  'teal': Color(0xFF196A5A), // 蓝绿
+  'green': Color(0xFF4C662B), // 松绿
+  'lime': Color(0xFF5C6300), // 橄榄
+  'amber': Color(0xFF7C5800), // 琥珀
+  'orange': Color(0xFF8B4F24), // 橙
+  'clay': Color(0xFF8F4C38), // 陶土
+  'red': Color(0xFFA33B3B), // 绯红
+  'pink': Color(0xFF9A4058), // 玫红
+  'magenta': Color(0xFF8B418F), // 品红
+  'slate': Color(0xFF4F5B62), // 石板灰
+};
+
+/// 每个种子色的中文名(设置页悬停/无障碍标签用)。
+const Map<String, String> kSeedNames = {
+  'purple': '紫',
+  'indigo': '靛蓝',
+  'blue': '海蓝',
+  'cyan': '青',
+  'teal': '蓝绿',
+  'green': '松绿',
+  'lime': '橄榄',
+  'amber': '琥珀',
+  'orange': '橙',
+  'clay': '陶土',
+  'red': '绯红',
+  'pink': '玫红',
+  'magenta': '品红',
+  'slate': '石板灰',
 };
 
 /// Win11 的可变光学字体:正文用 Text 视觉,大标题用 Display 视觉(更秀气),

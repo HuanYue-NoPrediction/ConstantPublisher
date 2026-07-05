@@ -120,30 +120,50 @@ class SettingsPage extends StatelessWidget {
           child: Column(
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Expanded(child: Text('主题色')),
-                  for (final entry in kSeeds.entries)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 10),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(20),
-                        onTap: () => state.setSeed(entry.key),
-                        child: Container(
-                          width: 30,
-                          height: 30,
-                          decoration: BoxDecoration(
-                            color: entry.value,
-                            shape: BoxShape.circle,
-                            border: state.seed == entry.key
-                                ? Border.all(color: scheme.primary, width: 3)
-                                : null,
+                  const SizedBox(
+                      width: 130,
+                      child: Padding(
+                          padding: EdgeInsets.only(top: 6),
+                          child: Text('主题色'))),
+                  Expanded(
+                    child: Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        for (final entry in kSeeds.entries)
+                          Tooltip(
+                            message: kSeedNames[entry.key] ?? entry.key,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(20),
+                              onTap: () => state.setSeed(entry.key),
+                              child: Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: entry.value,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: state.seed == entry.key
+                                        ? scheme.primary
+                                        : scheme.outlineVariant,
+                                    width: state.seed == entry.key ? 3 : 1,
+                                  ),
+                                ),
+                                child: state.seed == entry.key
+                                    ? const Icon(Icons.check,
+                                        size: 16, color: Colors.white)
+                                    : null,
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
+                      ],
                     ),
+                  ),
                 ],
               ),
-              const Divider(height: 20),
+              const Divider(height: 24),
               Row(
                 children: [
                   const Expanded(child: Text('深色模式')),
