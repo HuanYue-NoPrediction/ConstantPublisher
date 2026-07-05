@@ -271,8 +271,10 @@ class AppState extends ChangeNotifier {
       notifyListeners();
       final plan = await planStage(mod);
       if (plan.overLimit) {
-        throw Exception(
-            '内容 ${(plan.totalSize / 1048576).toStringAsFixed(1)} MB 超过工坊 100MB 上限');
+        // SteamPipe 工坊无固定体积硬上限(100MB 是老 Steam Cloud 通道的限制),
+        // 超大包只提示不拦截,真被拒会由 Steam 返回 EResult
+        log(LogLevel.warn,
+            '内容 ${(plan.totalSize / 1048576).toStringAsFixed(1)} MB 较大,上传耗时会变长;若被 Steam 拒绝请检查是否含无关大文件');
       }
       final staged = await materialize(mod, plan);
       log(LogLevel.info,

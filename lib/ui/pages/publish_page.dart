@@ -715,16 +715,17 @@ class _PublishPageState extends State<PublishPage> {
                     const SizedBox(height: 10),
                     Text(
                       '${humanSize(plan.totalSize)} · ${plan.kept.length} 项'
-                      ' · 忽略 ${plan.dropped.length} 项 · 上限 100 MB',
+                      ' · 忽略 ${plan.dropped.length} 项'
+                      '${plan.overLimit ? ' · 体积较大,上传耗时较长' : ''}',
                       style: TextStyle(
                           fontSize: 12,
                           color: plan.overLimit
-                              ? scheme.error
+                              ? sem.warn
                               : scheme.onSurfaceVariant),
                     ),
                     const SizedBox(height: 5),
                     LinearProgressIndicator(
-                      value: (plan.totalSize / StagePlan.steamLimit)
+                      value: (plan.totalSize / StagePlan.sizeReference)
                           .clamp(0.0, 1.0),
                     ),
                   ],

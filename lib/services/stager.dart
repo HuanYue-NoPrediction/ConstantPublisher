@@ -34,8 +34,10 @@ class StagePlan {
   List<StagedEntry> get dropped => entries.where((e) => e.skipped).toList();
   int get totalSize => kept.fold(0, (a, e) => a + e.size);
 
-  static const int steamLimit = 100 * 1024 * 1024; // 工坊 100MB 上限
-  bool get overLimit => totalSize > steamLimit;
+  /// 仅作参考线:SteamPipe 工坊没有固定体积硬上限,
+  /// 100MB 是老 Steam Cloud 通道的历史限制;超过只提示,不拦截。
+  static const int sizeReference = 100 * 1024 * 1024;
+  bool get overLimit => totalSize > sizeReference;
 }
 
 /// 简易 glob:'*' 通配任意字符;模式匹配路径本身或其任一父目录段。
