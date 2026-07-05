@@ -48,15 +48,44 @@ ThemeData buildTheme(String seedKey, Brightness brightness) {
     titleLarge: display(t.titleLarge, FontWeight.w400),
   );
 
+  final isLight = brightness == Brightness.light;
+  // 浅色:背景压成沉稳灰、卡片纯白 + 描边,层次分明不刺眼
+  final bg = isLight ? scheme.surfaceContainer : scheme.surface;
+  final cardColor = isLight ? scheme.surface : scheme.surfaceContainerLow;
+  final border = BorderSide(color: scheme.outlineVariant, width: 1);
+
   return base.copyWith(
-    scaffoldBackgroundColor: scheme.surface,
+    scaffoldBackgroundColor: bg,
     textTheme: tt,
     cardTheme: CardThemeData(
       elevation: 0,
-      color: scheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: cardColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: border,
+      ),
       margin: EdgeInsets.zero,
     ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: isLight
+          ? scheme.surfaceContainerLow
+          : scheme.surfaceContainerHighest,
+      isDense: true,
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: border,
+      ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: border,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: scheme.primary, width: 2),
+      ),
+    ),
+    dividerTheme: DividerThemeData(color: scheme.outlineVariant, space: 1),
     snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
   );
 }

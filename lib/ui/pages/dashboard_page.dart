@@ -7,8 +7,25 @@ import '../../state/app_state.dart';
 import '../../theme.dart';
 import '../widgets/bits.dart';
 
-class DashboardPage extends StatelessWidget {
+class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
+
+  @override
+  State<DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends State<DashboardPage> {
+  @override
+  void initState() {
+    super.initState();
+    // 进入即自动拉取(数据为空且环境就绪时),无需手点
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final state = context.read<AppState>();
+      if (state.remoteItems.isEmpty && state.steamReady && !state.busy) {
+        state.refreshRemote();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -139,11 +156,12 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
-  static String _fmt(int n) {
-    if (n >= 10000) return '${(n / 10000).toStringAsFixed(1)}w';
-    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}k';
-    return '$n';
-  }
+}
+
+String _fmt(int n) {
+  if (n >= 10000) return '${(n / 10000).toStringAsFixed(1)}w';
+  if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}k';
+  return '$n';
 }
 
 class _Metric extends StatelessWidget {
@@ -238,10 +256,9 @@ class _RankRow extends StatelessWidget {
                     fontSize: 13.5, fontWeight: FontWeight.w600)),
           ),
           const SizedBox(width: 10),
-          _stat(Icons.people_alt_outlined, DashboardPage._fmt(item.subs), dim),
+          _stat(Icons.people_alt_outlined, _fmt(item.subs), dim),
           const SizedBox(width: 12),
-          _stat(Icons.mode_comment_outlined,
-              DashboardPage._fmt(item.comments), dim),
+          _stat(Icons.mode_comment_outlined, _fmt(item.comments), dim),
           const SizedBox(width: 12),
           if (item.votesUp + item.votesDown > 0)
             _stat(
