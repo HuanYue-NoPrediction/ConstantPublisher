@@ -1,2 +1,0 @@
-E:\ConstantPublisher\helper_out\CpSteamHelper.pdb
-E:\ConstantPublisher\helper_out\CpSteamHelper.exe
