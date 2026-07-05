@@ -51,6 +51,7 @@ class _PublishPageState extends State<PublishPage> {
 
   String _loadedKey = ''; // '内容路径|目标id',变化时重载表单
   String _contentPath = '';
+  String? _loadedTargetId; // 当前草稿归属的发布目标
   Timer? _debounce;
   String _draftStamp = '编辑内容会自动保存为草稿 —— 上传失败也不会丢';
   StagePlan? _plan;
@@ -103,6 +104,7 @@ class _PublishPageState extends State<PublishPage> {
   /// 内容文件夹或发布目标变化时:重置默认值,再叠加草稿。
   Future<void> _loadFor(Mod mod, WorkshopItemRemote? target) async {
     _contentPath = mod.path;
+    _loadedTargetId = target?.id;
     _verCtrl.text = mod.info.version;
     _noteCtrl.text = '';
     _tags = target != null
@@ -120,7 +122,7 @@ class _PublishPageState extends State<PublishPage> {
         ? target.description
         : mod.info.description;
 
-    final d = await DraftStore.load(mod.path);
+    final d = await DraftStore.load(mod.path, target?.id);
     if (d != null) {
       _verCtrl.text = d.version.isEmpty ? _verCtrl.text : d.version;
       _visibility = d.visibility;
@@ -174,7 +176,7 @@ class _PublishPageState extends State<PublishPage> {
       titles: Map.of(_titles),
       descs: Map.of(_descs),
     );
-    await DraftStore.save(path, d);
+    await DraftStore.save(path, _loadedTargetId, d);
     if (mounted) {
       setState(() => _draftStamp = '已自动保存 ${_fmtTime(d.savedAt)}');
     }
@@ -886,7 +888,7 @@ class _PublishPageState extends State<PublishPage> {
                               tags: List.of(_tags),
                             );
                             if (ok) {
-                              await DraftStore.clear(mod.path);
+                              await DraftStore.clear(mod.path, targetId);
                               if (mounted) {
                                 setState(() =>
                                     _draftStamp = '已发布 · 草稿已清除');

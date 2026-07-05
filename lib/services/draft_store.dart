@@ -61,11 +61,14 @@ class Draft {
 }
 
 class DraftStore {
-  static String _key(String modPath) => 'draft:$modPath';
+  // 草稿按「内容文件夹 + 发布目标」双键隔离:同一文件夹发到不同条目(或新建)
+  // 各有独立草稿,避免"新建时存的 modinfo 描述"泄漏到"更新条目"的编辑会话。
+  static String _key(String modPath, String? targetId) =>
+      'draft:$modPath:${targetId ?? 'new'}';
 
-  static Future<Draft?> load(String modPath) async {
+  static Future<Draft?> load(String modPath, String? targetId) async {
     final sp = await SharedPreferences.getInstance();
-    final raw = sp.getString(_key(modPath));
+    final raw = sp.getString(_key(modPath, targetId));
     if (raw == null) return null;
     try {
       return Draft.fromJson(jsonDecode(raw) as Map<String, dynamic>);
@@ -74,13 +77,13 @@ class DraftStore {
     }
   }
 
-  static Future<void> save(String modPath, Draft d) async {
+  static Future<void> save(String modPath, String? targetId, Draft d) async {
     final sp = await SharedPreferences.getInstance();
-    await sp.setString(_key(modPath), jsonEncode(d.toJson()));
+    await sp.setString(_key(modPath, targetId), jsonEncode(d.toJson()));
   }
 
-  static Future<void> clear(String modPath) async {
+  static Future<void> clear(String modPath, String? targetId) async {
     final sp = await SharedPreferences.getInstance();
-    await sp.remove(_key(modPath));
+    await sp.remove(_key(modPath, targetId));
   }
 }
