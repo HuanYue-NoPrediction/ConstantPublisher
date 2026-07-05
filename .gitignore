@@ -13,3 +13,9 @@ windows/flutter/ephemeral/
 .idea/
 .vscode/
 *.iml
+
+# C# 助手构建产物(源码在 helper/*.cs;CI 会自行 dotnet publish)
+helper_out/
+helper/bin/
+helper/obj/
+_sdk_tmp/
