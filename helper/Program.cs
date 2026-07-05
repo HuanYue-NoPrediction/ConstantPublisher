@@ -32,6 +32,12 @@ internal static class Program
     private static SubmitItemUpdateResult_t _submitResult;
     private static SteamUGCQueryCompleted_t _queryResult;
 
+    // CallResult 必须在整个异步等待期间保持存活,否则 GC 回收后原生回调
+    // 会访问已释放内存 → 0xC0000005 崩溃。提为静态字段以钉住其生命周期。
+    private static CallResult<CreateItemResult_t>? _createCR;
+    private static CallResult<SubmitItemUpdateResult_t>? _submitCR;
+    private static CallResult<SteamUGCQueryCompleted_t>? _queryCR;
+
     private static void Emit(object o) =>
         Console.WriteLine(JsonSerializer.Serialize(o));
 
@@ -114,8 +120,8 @@ internal static class Program
         {
             Emit(new { @event = "stage", stage = "CreateItem · 新建工坊条目" });
             var call = SteamUGC.CreateItem(appId, EWorkshopFileType.k_EWorkshopFileTypeCommunity);
-            var cr = CallResult<CreateItemResult_t>.Create(OnCreateItem);
-            cr.Set(call);
+            _createCR = CallResult<CreateItemResult_t>.Create(OnCreateItem);
+            _createCR.Set(call);
             if (!Pump(() => _createDone, 60))
             {
                 Fail("CreateItem 超时(60 秒)");
@@ -156,8 +162,8 @@ internal static class Program
 
         Emit(new { @event = "stage", stage = "SubmitItemUpdate · 开始上传" });
         var sub = SteamUGC.SubmitItemUpdate(h, req.ChangeNote);
-        var sr = CallResult<SubmitItemUpdateResult_t>.Create(OnSubmit);
-        sr.Set(sub);
+        _submitCR = CallResult<SubmitItemUpdateResult_t>.Create(OnSubmit);
+        _submitCR.Set(sub);
 
         var sw = System.Diagnostics.Stopwatch.StartNew();
         while (!_submitDone)
@@ -210,8 +216,8 @@ internal static class Program
             SteamUGC.SetReturnMetadata(q, true);
             SteamUGC.SetReturnLongDescription(q, true);
             _queryDone = false;
-            var cr = CallResult<SteamUGCQueryCompleted_t>.Create(OnQuery);
-            cr.Set(SteamUGC.SendQueryUGCRequest(q));
+            _queryCR = CallResult<SteamUGCQueryCompleted_t>.Create(OnQuery);
+            _queryCR.Set(SteamUGC.SendQueryUGCRequest(q));
             if (!Pump(() => _queryDone, 30))
             {
                 SteamUGC.ReleaseQueryUGCRequest(q);
