@@ -81,19 +81,12 @@ class _TitleBar extends StatelessWidget {
       child: Row(
         children: [
           const SizedBox(width: 14),
-          Container(
-            width: 20,
-            height: 20,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-                color: scheme.primary,
-                borderRadius: BorderRadius.circular(6)),
-            child: Text('CP',
-                style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    color: scheme.onPrimary)),
-          ),
+          // 会扑腾的恐怖之眼(GIF 动画,ico 做不到,窗口内可以)
+          Image.asset('assets/eye.gif',
+              width: 26,
+              height: 26,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.medium),
           const SizedBox(width: 9),
           const Text('Constant Publisher',
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
