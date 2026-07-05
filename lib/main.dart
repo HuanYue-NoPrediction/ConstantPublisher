@@ -15,7 +15,7 @@ Future<void> main() async {
     minimumSize: Size(920, 620),
     center: true,
     titleBarStyle: TitleBarStyle.hidden,
-    title: 'Constant Publisher',
+    title: 'DST Mod Publisher',
   );
   windowManager.waitUntilReadyToShow(options, () async {
     await windowManager.show();
@@ -37,7 +37,7 @@ class App extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     return MaterialApp(
-      title: 'Constant Publisher',
+      title: 'DST Mod Publisher',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(state.seed, Brightness.light),
       darkTheme: buildTheme(state.seed, Brightness.dark),

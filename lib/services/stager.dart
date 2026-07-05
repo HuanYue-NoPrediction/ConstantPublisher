@@ -90,7 +90,7 @@ Future<StagePlan> planStage(Mod mod) async {
 /// 这样无论官方还是我们,永远不会把私有文件传上工坊。
 Future<Directory> materialize(Mod mod, StagePlan plan) async {
   final staging = Directory(
-      p.join(Directory.systemTemp.path, 'constant_publisher', mod.folderName));
+      p.join(Directory.systemTemp.path, 'dst_mod_publisher', mod.folderName));
   if (await staging.exists()) await staging.delete(recursive: true);
   await staging.create(recursive: true);
 

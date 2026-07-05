@@ -25,7 +25,7 @@ class SteamworksEngine {
     }
 
     final reqFile = File(p.join(
-        Directory.systemTemp.path, 'constant_publisher', 'request.json'));
+        Directory.systemTemp.path, 'dst_mod_publisher', 'request.json'));
     await reqFile.parent.create(recursive: true);
     await reqFile.writeAsString(jsonEncode({
       'appId': req.appId,

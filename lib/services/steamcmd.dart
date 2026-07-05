@@ -89,7 +89,7 @@ class SteamcmdEngine {
 
     yield const PublishEvent(stage: '写入 VDF', progress: .05);
     final vdfFile = File(p.join(
-        Directory.systemTemp.path, 'constant_publisher', 'item.vdf'));
+        Directory.systemTemp.path, 'dst_mod_publisher', 'item.vdf'));
     await vdfFile.parent.create(recursive: true);
     await vdfFile.writeAsString(buildVdf(req));
 

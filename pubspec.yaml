@@ -1,4 +1,4 @@
-name: constant_publisher
+name: dst_mod_publisher
 description: 饥荒 Steam 创意工坊模组上传器 —— Material You 界面 + steamcmd 引擎
 publish_to: 'none'
 version: 0.1.0

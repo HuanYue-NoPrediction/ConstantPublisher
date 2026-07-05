@@ -1,4 +1,4 @@
-# Constant Publisher
+# DST Mod Publisher
 
 饥荒(Don't Starve / DST)Steam 创意工坊模组上传器 —— Material You 界面 + steamcmd 引擎。
 用来替代官方 Mod Tools 里的 ModUploader,解决它的老毛病:
@@ -17,7 +17,7 @@
 
 ## 最终用户怎么用(零配置)
 
-解压发行包 → **确保 Steam 客户端开着、账号拥有饥荒** → 双击 `constant_publisher.exe`。
+解压发行包 → **确保 Steam 客户端开着、账号拥有饥荒** → 双击 `dst_mod_publisher.exe`。
 没了。默认的 **Steamworks 引擎**(`helper/CpSteamHelper.exe`)借用已登录的 Steam
 会话完成上传,与官方 ModUploader 同机制:不输账号、不输密码、不装 steamcmd。
 标签通过 `SetItemTags` 可靠写入,上传进度来自 `GetItemUpdateProgress` 真实字节数。
@@ -47,7 +47,7 @@ UI(Flutter / Material 3, lib/ui)
 2. **生成 Windows 平台壳**(本仓库只含 Dart 源码,平台胶水由 Flutter 生成):
    ```powershell
    cd E:\ConstantPublisher
-   flutter create . --platforms=windows --project-name constant_publisher
+   flutter create . --platforms=windows --project-name dst_mod_publisher
    flutter pub get
    ```
 3. **运行**:

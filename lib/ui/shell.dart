@@ -88,7 +88,7 @@ class _TitleBar extends StatelessWidget {
               fit: BoxFit.contain,
               filterQuality: FilterQuality.medium),
           const SizedBox(width: 9),
-          const Text('Constant Publisher',
+          const Text('DST Mod Publisher',
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           const SizedBox(width: 8),
           Text('饥荒工坊上传器',

@@ -28,8 +28,6 @@ class _PublishPageState extends State<PublishPage> {
   final _noteCtrl = TextEditingController();
   final _tagCtrl = TextEditingController();
 
-  String _channel = 'release';
-  bool _manualChannel = false;
   int _visibility = 0;
   List<String> _tags = [];
   bool _descPreview = false;
@@ -64,15 +62,11 @@ class _PublishPageState extends State<PublishPage> {
         ? target.tags.where((t) => !t.startsWith('version:')).toList()
         : List.of(mod.pub.tags);
     _visibility = mod.pub.visibility;
-    _manualChannel = false;
-    _channel = detectChannel(mod.info.version);
     _plan = null;
 
     final d = await DraftStore.load(mod.path);
     if (d != null) {
       _verCtrl.text = d.version.isEmpty ? _verCtrl.text : d.version;
-      _channel = d.channel;
-      _manualChannel = d.manualChannel;
       _visibility = d.visibility;
       _tags = List.of(d.tags);
       if (d.changeNote.isNotEmpty) _noteCtrl.text = d.changeNote;
@@ -104,12 +98,10 @@ class _PublishPageState extends State<PublishPage> {
     if (path.isEmpty) return;
     final d = Draft(
       version: _verCtrl.text,
-      channel: _channel,
       visibility: _visibility,
       tags: _tags,
       changeNote: _noteCtrl.text,
       description: _descCtrl.text,
-      manualChannel: _manualChannel,
     );
     await DraftStore.save(path, d);
     if (mounted) {
@@ -118,9 +110,6 @@ class _PublishPageState extends State<PublishPage> {
   }
 
   void _onVersionChanged(String v) {
-    if (!_manualChannel) {
-      setState(() => _channel = detectChannel(v));
-    }
     _saveDraftSoon();
   }
 
@@ -355,26 +344,6 @@ class _PublishPageState extends State<PublishPage> {
                 ),
               ),
             ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        SectionCard(
-          title: '发布通道',
-          subtitle: '由版本号自动判定,可手动覆盖',
-          child: SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(value: 'release', label: Text('正式版')),
-              ButtonSegment(value: 'beta', label: Text('Beta')),
-              ButtonSegment(value: 'alpha', label: Text('Alpha')),
-            ],
-            selected: {_channel},
-            onSelectionChanged: (s) {
-              setState(() {
-                _channel = s.first;
-                _manualChannel = true;
-              });
-              _saveDraftSoon();
-            },
           ),
         ),
         const SizedBox(height: 14),
@@ -835,7 +804,7 @@ class _PublishPageState extends State<PublishPage> {
                 ),
                 child: Text(
                   '等效命令行:\ndstpub upload ./${mod.folderName} '
-                  '--set-version ${_verCtrl.text} --channel $_channel --yes',
+                  '--set-version ${_verCtrl.text} --yes',
                   style: TextStyle(
                       fontSize: 11,
                       fontFamily: 'monospace',
