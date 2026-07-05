@@ -153,25 +153,42 @@ class _PublishPageState extends State<PublishPage> {
         ),
         const SizedBox(height: 6),
         // 模组切换 chips + 草稿状态
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
+        Row(
           children: [
-            for (final m in state.mods)
-              ChoiceChip(
-                label: Text(m.info.name.isEmpty ? m.folderName : m.info.name),
-                selected: m.path == mod.path,
-                onSelected: (_) => state.select(m),
+            Expanded(
+              child: DropdownMenu<String>(
+                key: ValueKey(mod.path),
+                initialSelection: mod.path,
+                leadingIcon: const Icon(Icons.extension_outlined),
+                label: const Text('模组'),
+                expandedInsets: EdgeInsets.zero,
+                enableFilter: true,
+                requestFocusOnTap: true,
+                dropdownMenuEntries: [
+                  for (final m in state.mods)
+                    DropdownMenuEntry(
+                      value: m.path,
+                      label:
+                          '${m.info.name.isEmpty ? m.folderName : m.info.name} · ${m.folderName}/ (v${m.info.version})',
+                    ),
+                ],
+                onSelected: (v) {
+                  final m =
+                      state.mods.where((x) => x.path == v).firstOrNull;
+                  if (m != null) state.select(m);
+                },
               ),
-            ActionChip(
-              avatar: const Icon(Icons.folder_open, size: 16),
-              label: const Text('其他文件夹…'),
+            ),
+            const SizedBox(width: 10),
+            OutlinedButton.icon(
               onPressed: () async {
                 final dir = await getDirectoryPath();
                 if (dir == null) return;
                 final m = await state.addExternalFolder(dir);
                 if (m != null) state.select(m);
               },
+              icon: const Icon(Icons.folder_open, size: 18),
+              label: const Text('其他文件夹…'),
             ),
           ],
         ),
@@ -473,34 +490,88 @@ class _PublishPageState extends State<PublishPage> {
           ),
           child: Builder(builder: (context) {
             final pv = mod.preview;
-            if (pv == null) {
-              return Text(
-                '未找到预览图 —— 往模组文件夹放一张 preview.jpg,或点右上「更换…」选择',
-                style: TextStyle(
-                    fontSize: 12.5, color: scheme.onSurfaceVariant),
-              );
+            final wsItem = mod.linked
+                ? state.remoteItems
+                    .where((x) => x.id == mod.pub.publishedFileId)
+                    .firstOrNull
+                : null;
+
+            Widget slot(Widget img, String label) => Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ClipRRect(
+                        borderRadius: BorderRadius.circular(10), child: img),
+                    const SizedBox(height: 4),
+                    Text(label,
+                        style: TextStyle(
+                            fontSize: 10.5,
+                            color: scheme.onSurfaceVariant)),
+                  ],
+                );
+
+            Widget placeholder(IconData icon) => Container(
+                  width: 64,
+                  height: 64,
+                  color: scheme.surfaceContainerHighest,
+                  child: Icon(icon,
+                      size: 20, color: scheme.onSurfaceVariant),
+                );
+
+            final slots = <Widget>[];
+            if (mod.linked) {
+              slots.add(slot(
+                wsItem != null && wsItem.previewUrl.isNotEmpty
+                    ? Image.network(wsItem.previewUrl,
+                        width: 64,
+                        height: 64,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) =>
+                            placeholder(Icons.cloud_off_outlined))
+                    : placeholder(Icons.cloud_outlined),
+                '工坊当前',
+              ));
+              slots.add(Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: Icon(Icons.arrow_forward,
+                    size: 16, color: scheme.onSurfaceVariant),
+              ));
             }
+
+            if (pv == null) {
+              slots.add(slot(placeholder(Icons.image_not_supported_outlined),
+                  '本地(缺失)'));
+              return Row(children: [
+                ...slots,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    '未找到本地预览图 —— 放一张 preview.jpg 进模组文件夹,或点右上「更换…」',
+                    style: TextStyle(
+                        fontSize: 12.5, color: scheme.onSurfaceVariant),
+                  ),
+                ),
+              ]);
+            }
+
             final stat = pv.statSync();
             final kb = (stat.size / 1024).round();
             final okSize = stat.size < 1024 * 1024;
+            slots.add(slot(
+              Image.file(
+                pv,
+                key: ValueKey('${pv.path}-${stat.modified}'),
+                width: 64,
+                height: 64,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) =>
+                    placeholder(Icons.broken_image_outlined),
+              ),
+              '本地(将上传)',
+            ));
+
             return Row(
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Image.file(
-                    pv,
-                    key: ValueKey('${pv.path}-${stat.modified}'),
-                    width: 72,
-                    height: 72,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      width: 72,
-                      height: 72,
-                      color: scheme.surfaceContainerHighest,
-                      child: const Icon(Icons.broken_image_outlined),
-                    ),
-                  ),
-                ),
+                ...slots,
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(

@@ -20,6 +20,7 @@ class WorkshopPage extends StatefulWidget {
 
 class _WorkshopPageState extends State<WorkshopPage> {
   var _autoFetched = false;
+  var _tagsExpanded = false;
   final Set<String> _tagFilter = {};
 
   @override
@@ -149,7 +150,14 @@ class _WorkshopPageState extends State<WorkshopPage> {
                             onSelected: (_) =>
                                 setState(() => _tagFilter.clear()),
                           ),
-                          for (final t in sortedTags)
+                          // 折叠:默认前 8 个,选中的永远可见
+                          for (final t in _tagsExpanded
+                              ? sortedTags
+                              : sortedTags
+                                  .where((t) =>
+                                      _tagFilter.contains(t) ||
+                                      sortedTags.indexOf(t) < 8)
+                                  .toList())
                             FilterChip(
                               label: Text('$t (${tagCounts[t]})'),
                               selected: _tagFilter.contains(t),
@@ -160,6 +168,14 @@ class _WorkshopPageState extends State<WorkshopPage> {
                                   _tagFilter.remove(t);
                                 }
                               }),
+                            ),
+                          if (sortedTags.length > 8)
+                            ActionChip(
+                              label: Text(_tagsExpanded
+                                  ? '收起'
+                                  : '+${sortedTags.length - 8} 更多'),
+                              onPressed: () => setState(
+                                  () => _tagsExpanded = !_tagsExpanded),
                             ),
                         ],
                       ),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -64,6 +65,10 @@ class AppState extends ChangeNotifier {
         .values[sp.getInt('themeMode') ?? ThemeMode.system.index];
     if (modsDir.isNotEmpty) await scanMods();
     notifyListeners();
+    if (engine == 'steamworks' && steamReady) {
+      // 后台预拉名下条目:发布页封面对比、工坊页、绑定下拉都依赖它
+      unawaited(refreshRemote());
+    }
   }
 
   Future<void> _persist(String key, String value) async {
