@@ -47,11 +47,7 @@ internal static class Program
             var listAppId = args.Length >= 2 && uint.TryParse(args[1], out var a) ? a : 322330u;
             Environment.SetEnvironmentVariable("SteamAppId", listAppId.ToString());
             Environment.SetEnvironmentVariable("SteamGameId", listAppId.ToString());
-            if (!SteamAPI.Init())
-            {
-                Fail($"无法连接 Steam:请确认 Steam 客户端正在运行并已登录,且该账号拥有 AppID {listAppId} 对应的游戏");
-                return 0;
-            }
+            if (!TryInit(listAppId)) return 0;
             try
             {
                 return RunList(new AppId_t(listAppId));
@@ -91,11 +87,7 @@ internal static class Program
         Environment.SetEnvironmentVariable("SteamAppId", req.AppId.ToString());
         Environment.SetEnvironmentVariable("SteamGameId", req.AppId.ToString());
 
-        if (!SteamAPI.Init())
-        {
-            Fail($"无法连接 Steam:请确认 Steam 客户端正在运行并已登录,且该账号拥有 AppID {req.AppId} 对应的游戏");
-            return 0;
-        }
+        if (!TryInit(req.AppId)) return 0;
 
         try
         {
@@ -256,6 +248,30 @@ internal static class Program
         _queryResult = r;
         _ioFailure = ioFail;
         _queryDone = true;
+    }
+
+    /// 原生库缺失/损坏时给出干净的 JSON 报错,而不是让进程裸崩。
+    private static bool TryInit(object appId)
+    {
+        try
+        {
+            if (!SteamAPI.Init())
+            {
+                Fail($"无法连接 Steam:请确认 Steam 客户端正在运行并已登录,且该账号拥有 AppID {appId} 对应的游戏");
+                return false;
+            }
+            return true;
+        }
+        catch (DllNotFoundException)
+        {
+            Fail("缺少 steam_api64.dll —— 它应与 CpSteamHelper.exe 在同一目录");
+            return false;
+        }
+        catch (Exception e)
+        {
+            Fail("Steamworks 初始化异常: " + e.Message);
+            return false;
+        }
     }
 
     private static bool Pump(Func<bool> done, int timeoutSec)

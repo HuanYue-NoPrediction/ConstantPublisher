@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "dgSpecHash": "kkXonVL/ckw=",
+  "success": true,
+  "projectFilePath": "E:\\ConstantPublisher\\helper\\CpSteamHelper.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\33079\\.nuget\\packages\\microsoft.net.illink.tasks\\8.0.28\\microsoft.net.illink.tasks.8.0.28.nupkg.sha512",
+    "C:\\Users\\33079\\.nuget\\packages\\steamworks.net\\20.2.0\\steamworks.net.20.2.0.nupkg.sha512",
+    "C:\\Users\\33079\\.nuget\\packages\\microsoft.netcore.app.runtime.win-x64\\8.0.28\\microsoft.netcore.app.runtime.win-x64.8.0.28.nupkg.sha512",
+    "C:\\Users\\33079\\.nuget\\packages\\microsoft.windowsdesktop.app.runtime.win-x64\\8.0.28\\microsoft.windowsdesktop.app.runtime.win-x64.8.0.28.nupkg.sha512",
+    "C:\\Users\\33079\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.win-x64\\8.0.28\\microsoft.aspnetcore.app.runtime.win-x64.8.0.28.nupkg.sha512"
+  ],
+  "logs": []
+}

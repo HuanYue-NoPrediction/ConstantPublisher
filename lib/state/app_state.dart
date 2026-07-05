@@ -360,14 +360,21 @@ class AppState extends ChangeNotifier {
             }
           } catch (_) {/* 非 JSON 行忽略 */}
         }
-        await errFuture;
-        await proc.exitCode;
+        final errLines = await errFuture;
+        final code = await proc.exitCode;
         if (ok) {
           remoteItems = items;
-          log(LogLevel.info,
-              'QueryUserUGC → ${items.length} 个条目(零配置,来自 Steam 会话)');
+          log(
+              LogLevel.info,
+              items.isEmpty
+                  ? 'QueryUserUGC → 0 个条目:该账号尚未发布过工坊模组(功能正常)'
+                  : 'QueryUserUGC → ${items.length} 个条目(零配置,来自 Steam 会话)');
         } else {
-          log(LogLevel.error, '拉取名下条目失败:${error ?? '未知错误'}');
+          for (final line in errLines) {
+            log(LogLevel.error, '[helper] $line');
+          }
+          log(LogLevel.error,
+              '拉取名下条目失败:${error ?? '助手异常退出(exit $code),详见上方 [helper] 日志'}');
         }
       } catch (e) {
         log(LogLevel.error, '拉取名下条目失败:$e');

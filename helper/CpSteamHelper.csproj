@@ -15,8 +15,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- 该包内置 steam_api64.dll 原生库,发布时自动打入 -->
+    <!-- 注意:该包只含托管层,不带 Valve 原生库 -->
     <PackageReference Include="Steamworks.NET" Version="20.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Valve 的 Steamworks 再分发件,必须以松散文件形式放在 exe 旁(不打进单文件包) -->
+    <None Include="native\steam_api64.dll" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
