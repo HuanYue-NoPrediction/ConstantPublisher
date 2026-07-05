@@ -41,7 +41,8 @@ class AppState extends ChangeNotifier {
 
   // ---------- 数据 ----------
   List<Mod> mods = [];
-  Mod? current;
+  Mod? current; // 当前内容文件夹
+  String? publishTargetId; // 发布目标:工坊条目 id,null = 新建条目
   final List<LogEntry> logs = [];
   List<WorkshopItemRemote> remoteItems = [];
 
@@ -192,10 +193,22 @@ class AppState extends ChangeNotifier {
     return mod;
   }
 
-  void selectAndGoPublish(Mod mod) {
-    current = mod;
-    navIndex = 3; // 发布页
+  /// 发起一次发布:内容文件夹与目标条目相互独立,任一为空则保留当前值。
+  void startPublish({Mod? content, String? targetId, bool goto = true}) {
+    if (content != null) current = content;
+    publishTargetId = targetId;
+    if (goto) navIndex = 3;
     notifyListeners();
+  }
+
+  void setPublishTarget(String? id) {
+    publishTargetId = id;
+    notifyListeners();
+  }
+
+  /// 从某内容文件夹发起发布:有历史条目则默认更新它,否则新建。
+  void selectAndGoPublish(Mod mod) {
+    startPublish(content: mod, targetId: mod.pub.publishedFileId);
   }
 
   /// 把工坊条目 id 绑定到任意本地文件夹 —— "新建文件夹更新老条目"走这里。
@@ -238,6 +251,7 @@ class AppState extends ChangeNotifier {
   // ---------- 发布 ----------
   Future<bool> publish({
     required Mod mod,
+    required String? targetId, // null = 新建条目
     required String version,
     required String description,
     required String changeNote,
@@ -262,9 +276,15 @@ class AppState extends ChangeNotifier {
       if (!mod.info.valid) {
         throw Exception('modinfo.lua 无效:缺少 name 或 version');
       }
-      final last = mod.pub.lastPublishedVersion;
-      if (last != null && cmpVer(version, last) <= 0) {
-        throw Exception('版本 $version 需大于上次发布的 $last');
+      final wsVersion = targetId == null
+          ? ''
+          : (remoteItems
+                  .where((x) => x.id == targetId)
+                  .firstOrNull
+                  ?.version ??
+              '');
+      if (wsVersion.isNotEmpty && cmpVer(version, wsVersion) <= 0) {
+        throw Exception('版本 $version 需大于工坊当前 $wsVersion');
       }
 
       // 版本写回 modinfo.lua
@@ -297,7 +317,7 @@ class AppState extends ChangeNotifier {
 
       final req = PublishRequest(
         appId: mod.pub.appId,
-        publishedFileId: mod.pub.publishedFileId,
+        publishedFileId: targetId,
         contentFolder: staged.path,
         previewFile: preview,
         title: mod.info.name,
@@ -327,15 +347,18 @@ class AppState extends ChangeNotifier {
       }
       if (error != null) throw Exception(error);
 
-      if (newId != null && newId.isNotEmpty) {
-        mod.pub.publishedFileId = newId;
-      }
+      final resultId =
+          (newId != null && newId.isNotEmpty) ? newId : targetId;
+      // 记住这次用的条目作为该文件夹下次的默认目标(仅便利,不构成隐藏耦合)
+      mod.pub.publishedFileId = resultId;
       mod.pub.lastPublishedVersion = version;
       mod.pub.visibility = visibility;
       mod.pub.tags = List.of(tags);
       await mod.savePub();
+      publishTargetId = resultId;
       log(LogLevel.info,
-          '✔ 已发布 ${mod.info.name} v$version(条目 ${mod.pub.publishedFileId ?? '?'})· 更新记录已写入');
+          '✔ 已发布 ${mod.info.name} v$version(条目 ${resultId ?? '?'})· 更新记录已写入');
+      unawaited(refreshRemote()); // 刷新列表,新版本/新条目立即反映
       return true;
     } catch (e) {
       final msg = e.toString().replaceFirst('Exception: ', '');

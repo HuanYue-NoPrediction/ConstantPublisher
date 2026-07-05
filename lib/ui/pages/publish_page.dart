@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import '../../models/mod.dart';
 import '../../services/draft_store.dart';
 import '../../services/stager.dart';
+import '../../services/workshop_api.dart';
 import '../../state/app_state.dart';
 import '../../theme.dart';
 import '../widgets/bbcode.dart';
@@ -33,7 +34,8 @@ class _PublishPageState extends State<PublishPage> {
   List<String> _tags = [];
   bool _descPreview = false;
 
-  String? _modPath; // 当前表单对应的模组
+  String _loadedKey = ''; // '内容路径|目标id',变化时重载表单
+  String _contentPath = '';
   Timer? _debounce;
   String _draftStamp = '编辑内容会自动保存为草稿 —— 上传失败也不会丢';
   StagePlan? _plan;
@@ -48,19 +50,13 @@ class _PublishPageState extends State<PublishPage> {
     super.dispose();
   }
 
-  /// 模组切换时:重置为该模组默认值,再叠加草稿。
-  Future<void> _loadFor(Mod mod) async {
-    final state = context.read<AppState>();
-    final remote = mod.linked
-        ? state.remoteItems
-            .where((x) => x.id == mod.pub.publishedFileId)
-            .firstOrNull
-        : null;
-    _modPath = mod.path;
+  /// 内容文件夹或发布目标变化时:重置默认值,再叠加草稿。
+  Future<void> _loadFor(Mod mod, WorkshopItemRemote? target) async {
+    _contentPath = mod.path;
     _verCtrl.text = mod.info.version;
     // 更新已发布条目时,简介默认取工坊现有全文(在其基础上改),否则用本地 modinfo
-    _descCtrl.text = (remote != null && remote.description.isNotEmpty)
-        ? remote.description
+    _descCtrl.text = (target != null && target.description.isNotEmpty)
+        ? target.description
         : mod.info.description;
     _noteCtrl.text = '';
     _tags = List.of(mod.pub.tags);
@@ -89,7 +85,7 @@ class _PublishPageState extends State<PublishPage> {
 
   Future<void> _refreshPlan(Mod mod) async {
     final plan = await planStage(mod);
-    if (mounted && _modPath == mod.path) setState(() => _plan = plan);
+    if (mounted && _contentPath == mod.path) setState(() => _plan = plan);
   }
 
   String _fmtTime(DateTime t) =>
@@ -101,8 +97,8 @@ class _PublishPageState extends State<PublishPage> {
   }
 
   Future<void> _saveDraft() async {
-    final path = _modPath;
-    if (path == null) return;
+    final path = _contentPath;
+    if (path.isEmpty) return;
     final d = Draft(
       version: _verCtrl.text,
       channel: _channel,
@@ -131,45 +127,114 @@ class _PublishPageState extends State<PublishPage> {
     final scheme = Theme.of(context).colorScheme;
     final sem = SemanticColors.of(context);
     final mod = state.current;
+    final targetId = state.publishTargetId;
+    final target = targetId == null
+        ? null
+        : state.remoteItems.where((x) => x.id == targetId).firstOrNull;
 
     if (mod == null) {
       return Center(
-        child: Text('先到「模组」页选择 mods 目录',
-            style: TextStyle(color: scheme.onSurfaceVariant)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('先选择要上传的内容文件夹',
+                style: TextStyle(color: scheme.onSurfaceVariant)),
+            const SizedBox(height: 12),
+            FilledButton.tonalIcon(
+              onPressed: () async {
+                final dir = await getDirectoryPath();
+                if (dir == null) return;
+                final m = await state.addExternalFolder(dir);
+                if (m != null) {
+                  state.startPublish(
+                      content: m, targetId: targetId, goto: false);
+                }
+              },
+              icon: const Icon(Icons.folder_open),
+              label: const Text('选择文件夹…'),
+            ),
+          ],
+        ),
       );
     }
-    if (_modPath != mod.path) {
-      // 切换了模组:异步加载默认值+草稿
-      _modPath = mod.path;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _loadFor(mod));
+
+    final key = '${mod.path}|$targetId';
+    if (key != _loadedKey) {
+      _loadedKey = key;
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _loadFor(mod, target));
     }
 
-    final last = mod.pub.lastPublishedVersion;
+    final isNew = targetId == null;
+    final wsVersion = target?.version ?? '';
     final verOk = _verCtrl.text.isNotEmpty &&
-        (last == null || cmpVer(_verCtrl.text, last) > 0);
+        (isNew || wsVersion.isEmpty || cmpVer(_verCtrl.text, wsVersion) > 0);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 18, 24, 32),
       children: [
         Text('发布', style: Theme.of(context).textTheme.headlineSmall),
-        Text(
-          '${mod.folderName}/modinfo.lua · 本地 v${mod.info.version}'
-          '${mod.linked ? ' · 条目 ${mod.pub.publishedFileId}(上次 v${last ?? '?'})' : ' · 未发布(将 CreateItem)'}',
-          style: TextStyle(
-              fontSize: 13,
-              fontFamily: 'monospace',
-              color: scheme.onSurfaceVariant),
+        Text('先选发布目标(新建或某个工坊条目),再选内容文件夹 —— 两者独立,像官方工具一样',
+            style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant)),
+        const SizedBox(height: 12),
+        // 发布目标
+        DropdownButtonFormField<String>(
+          initialValue: targetId ?? '__new__',
+          isExpanded: true,
+          decoration: const InputDecoration(
+              labelText: '发布目标',
+              border: OutlineInputBorder(),
+              isDense: true),
+          items: [
+            const DropdownMenuItem(
+              value: '__new__',
+              child: Row(children: [
+                Icon(Icons.add_circle_outline, size: 20),
+                SizedBox(width: 10),
+                Text('新建工坊条目'),
+              ]),
+            ),
+            for (final it in state.remoteItems)
+              DropdownMenuItem(
+                value: it.id,
+                child: Row(children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: it.previewUrl.isEmpty
+                        ? Icon(Icons.cloud_outlined,
+                            size: 20, color: scheme.onSurfaceVariant)
+                        : Image.network(it.previewUrl,
+                            width: 22,
+                            height: 22,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Icon(
+                                Icons.cloud_off_outlined,
+                                size: 20,
+                                color: scheme.onSurfaceVariant)),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      '${it.title}  ·  v${it.version.isEmpty ? '?' : it.version}',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ]),
+              ),
+          ],
+          onChanged: (v) =>
+              state.setPublishTarget(v == '__new__' ? null : v),
         ),
-        const SizedBox(height: 6),
-        // 模组切换 chips + 草稿状态
+        const SizedBox(height: 12),
+        // 内容文件夹
         Row(
           children: [
             Expanded(
               child: DropdownMenu<String>(
                 key: ValueKey(mod.path),
                 initialSelection: mod.path,
-                leadingIcon: const Icon(Icons.extension_outlined),
-                label: const Text('模组'),
+                leadingIcon: const Icon(Icons.folder_outlined),
+                label: const Text('内容文件夹'),
                 expandedInsets: EdgeInsets.zero,
                 enableFilter: true,
                 requestFocusOnTap: true,
@@ -184,34 +249,23 @@ class _PublishPageState extends State<PublishPage> {
                 onSelected: (v) {
                   final m =
                       state.mods.where((x) => x.path == v).firstOrNull;
-                  if (m != null) state.select(m);
+                  if (m != null) {
+                    state.startPublish(
+                        content: m, targetId: targetId, goto: false);
+                  }
                 },
               ),
             ),
             const SizedBox(width: 10),
             OutlinedButton.icon(
               onPressed: () async {
-                // 若当前正在更新某工坊条目,换文件夹时把该条目的绑定带过去,
-                // 避免新文件夹被当成"首次发布"而误建新条目、丢失工坊封面
-                final carryId = mod.linked ? mod.pub.publishedFileId : null;
                 final dir = await getDirectoryPath();
                 if (dir == null) return;
                 final m = await state.addExternalFolder(dir);
-                if (m == null) return;
-                if (carryId != null && !m.linked) {
-                  final rv = state.remoteItems
-                      .where((x) => x.id == carryId)
-                      .firstOrNull;
-                  await state.bindItem(m, carryId,
-                      knownVersion: (rv != null && rv.version.isNotEmpty)
-                          ? rv.version
-                          : null);
-                  if (context.mounted) {
-                    toast(context,
-                        '已把条目 $carryId 的内容来源切换为 ${m.folderName}/');
-                  }
+                if (m != null) {
+                  state.startPublish(
+                      content: m, targetId: targetId, goto: false);
                 }
-                state.select(m);
               },
               icon: const Icon(Icons.folder_open, size: 18),
               label: const Text('其他文件夹…'),
@@ -231,8 +285,9 @@ class _PublishPageState extends State<PublishPage> {
 
         LayoutBuilder(builder: (context, box) {
           final wide = box.maxWidth > 980;
-          final form = _buildForm(mod, verOk, last);
-          final side = _buildSide(mod, verOk);
+          final form = _buildForm(mod, isNew, wsVersion, verOk);
+          final side =
+              _buildSide(mod, target, targetId, isNew, wsVersion, verOk);
           if (!wide) {
             return Column(children: [form, const SizedBox(height: 14), side]);
           }
@@ -249,9 +304,10 @@ class _PublishPageState extends State<PublishPage> {
     );
   }
 
-  Widget _buildForm(Mod mod, bool verOk, String? last) {
+  Widget _buildForm(Mod mod, bool isNew, String wsVersion, bool verOk) {
     final scheme = Theme.of(context).colorScheme;
     final sem = SemanticColors.of(context);
+    final bumpBase = wsVersion.isEmpty ? null : wsVersion;
     return Column(
       children: [
         SectionCard(
@@ -272,26 +328,26 @@ class _PublishPageState extends State<PublishPage> {
               const SizedBox(width: 12),
               OutlinedButton(
                 onPressed: () {
-                  _verCtrl.text = suggestBump(_verCtrl.text, last);
+                  _verCtrl.text = suggestBump(_verCtrl.text, bumpBase);
                   _onVersionChanged(_verCtrl.text);
                 },
-                child: Text('自增 → ${suggestBump(_verCtrl.text, last)}'),
+                child: Text('自增 → ${suggestBump(_verCtrl.text, bumpBase)}'),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  !mod.linked
-                      ? '✓ 首次发布,将新建工坊条目'
-                      : last == null
-                          ? '⚠ 更新条目 ${mod.pub.publishedFileId},但工坊版本未知(老条目无版本元数据)—— 请确认大于线上版本;本次发布后将自动记录'
+                  isNew
+                      ? '✓ 新建工坊条目'
+                      : wsVersion.isEmpty
+                          ? '⚠ 工坊版本未知(老条目无版本元数据)—— 请确认大于线上版本;本次发布后将自动记录'
                           : verOk
-                              ? '✓ 大于工坊当前 $last'
-                              : '✕ 需大于工坊当前 $last(自增按两者较高版本计算)',
+                              ? '✓ 大于工坊当前 $wsVersion'
+                              : '✕ 需大于工坊当前 $wsVersion(自增按两者较高版本计算)',
                   style: TextStyle(
                       fontSize: 12.5,
-                      color: !mod.linked
+                      color: isNew
                           ? sem.success
-                          : last == null
+                          : wsVersion.isEmpty
                               ? sem.warn
                               : verOk
                                   ? sem.success
@@ -499,7 +555,8 @@ class _PublishPageState extends State<PublishPage> {
     );
   }
 
-  Widget _buildSide(Mod mod, bool verOk) {
+  Widget _buildSide(Mod mod, WorkshopItemRemote? target, String? targetId,
+      bool isNew, String wsVersion, bool verOk) {
     final state = context.watch<AppState>();
     final scheme = Theme.of(context).colorScheme;
     final sem = SemanticColors.of(context);
@@ -516,11 +573,7 @@ class _PublishPageState extends State<PublishPage> {
           ),
           child: Builder(builder: (context) {
             final pv = mod.preview;
-            final wsItem = mod.linked
-                ? state.remoteItems
-                    .where((x) => x.id == mod.pub.publishedFileId)
-                    .firstOrNull
-                : null;
+            final wsItem = target;
 
             Widget slot(Widget img, String label) => Column(
                   mainAxisSize: MainAxisSize.min,
@@ -544,7 +597,7 @@ class _PublishPageState extends State<PublishPage> {
                 );
 
             final slots = <Widget>[];
-            if (mod.linked) {
+            if (!isNew) {
               slots.add(slot(
                 wsItem != null && wsItem.previewUrl.isNotEmpty
                     ? Image.network(wsItem.previewUrl,
@@ -717,29 +770,33 @@ class _PublishPageState extends State<PublishPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               FilledButton.icon(
-                onPressed: state.busy || !verOk && mod.linked
-                    ? null
-                    : () async {
-                        final ok = await state.publish(
-                          mod: mod,
-                          version: _verCtrl.text.trim(),
-                          description: _descCtrl.text,
-                          changeNote: _noteCtrl.text,
-                          visibility: _visibility,
-                          tags: List.of(_tags),
-                        );
-                        if (ok) {
-                          await DraftStore.clear(mod.path);
-                          if (mounted) {
-                            setState(() =>
-                                _draftStamp = '已发布 · 草稿已清除');
-                            toast(context,
-                                '已发布 ${mod.info.name} v${_verCtrl.text}');
-                          }
-                        }
-                      },
+                onPressed:
+                    state.busy || (!isNew && wsVersion.isNotEmpty && !verOk)
+                        ? null
+                        : () async {
+                            final ok = await state.publish(
+                              mod: mod,
+                              targetId: targetId,
+                              version: _verCtrl.text.trim(),
+                              description: _descCtrl.text,
+                              changeNote: _noteCtrl.text,
+                              visibility: _visibility,
+                              tags: List.of(_tags),
+                            );
+                            if (ok) {
+                              await DraftStore.clear(mod.path);
+                              if (mounted) {
+                                setState(() =>
+                                    _draftStamp = '已发布 · 草稿已清除');
+                                toast(context,
+                                    '已发布 ${mod.info.name} v${_verCtrl.text}');
+                              }
+                            }
+                          },
                 icon: const Icon(Icons.upload),
-                label: Text(state.busy ? '发布中…' : '发布到创意工坊'),
+                label: Text(state.busy
+                    ? '发布中…'
+                    : isNew ? '发布(新建条目)' : '更新到创意工坊'),
               ),
               const SizedBox(height: 8),
               FilledButton.tonal(
