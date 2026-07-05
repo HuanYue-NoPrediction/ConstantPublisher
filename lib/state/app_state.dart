@@ -338,7 +338,10 @@ class AppState extends ChangeNotifier {
       publishTargetId = resultId; // 会话内:新建后再次发布即更新该条目
       log(LogLevel.info,
           '✔ 已发布 ${mod.info.name} v$version(条目 ${resultId ?? '?'})· 更新记录已写入');
-      unawaited(refreshRemote()); // 刷新列表,新版本/新条目立即反映
+      // 本地先行更新列表(即时反映),不马上起 list 助手 ——
+      // 刚发布完 Steam 会话尚未释放,立刻查询会撞车;延后 4 秒再拉一次
+      if (resultId != null) _upsertLocal(resultId, mod, version, visibility);
+      Timer(const Duration(seconds: 4), () => unawaited(refreshRemote()));
       return true;
     } catch (e) {
       final msg = e.toString().replaceFirst('Exception: ', '');
@@ -353,12 +356,63 @@ class AppState extends ChangeNotifier {
   }
 
   // ---------- 工坊巡检 ----------
+  /// 发布成功后本地即时更新列表条目(避免立刻起 list 助手撞 Steam 会话)。
+  void _upsertLocal(String id, Mod mod, String version, int visibility) {
+    final idx = remoteItems.indexWhere((x) => x.id == id);
+    if (idx >= 0) {
+      final old = remoteItems[idx];
+      remoteItems[idx] = WorkshopItemRemote(
+        id: id,
+        title: mod.info.name,
+        subs: old.subs,
+        favorites: old.favorites,
+        comments: old.comments,
+        views: old.views,
+        votesUp: old.votesUp,
+        votesDown: old.votesDown,
+        score: old.score,
+        updated: DateTime.now(),
+        tags: old.tags,
+        version: version,
+        previewUrl: old.previewUrl,
+        description: old.description,
+      );
+    } else {
+      remoteItems = [
+        WorkshopItemRemote(
+            id: id,
+            title: mod.info.name,
+            subs: 0,
+            updated: DateTime.now(),
+            version: version),
+        ...remoteItems,
+      ];
+    }
+    notifyListeners();
+  }
+
+  bool _refreshing = false; // 单飞:同一时刻只允许一个 list 助手,避免多进程抢 Steam 会话
+
   Future<void> refreshRemote() async {
+    if (_refreshing) return; // 已有拉取在进行,直接返回,不再起第二个助手
+    _refreshing = true;
+    try {
+      await _refreshRemoteInner();
+    } finally {
+      _refreshing = false;
+    }
+  }
+
+  Future<void> _refreshRemoteInner() async {
     // 首选:Steamworks 助手直查(QueryUserUGC,零配置,官方工具同款机制)
     if (engine == 'steamworks' && File(helperPath).existsSync()) {
+      Process? proc;
       try {
-        final proc = await Process.start(helperPath, ['list', '322330']);
+        proc = await Process.start(helperPath, ['list', '322330']);
         await proc.stdin.close();
+        final p = proc;
+        // 40 秒兜底:助手内部 30 秒查询超时若没生效,这里强杀,避免僵尸进程
+        final killTimer = Timer(const Duration(seconds: 40), () => p.kill());
         final errFuture = proc.stderr
             .transform(utf8.decoder)
             .transform(const LineSplitter())
@@ -412,6 +466,7 @@ class AppState extends ChangeNotifier {
         }
         final errLines = await errFuture;
         final code = await proc.exitCode;
+        killTimer.cancel();
         if (ok) {
           remoteItems = items;
           log(
@@ -420,14 +475,17 @@ class AppState extends ChangeNotifier {
                   ? 'QueryUserUGC → 0 个条目:该账号尚未发布过工坊模组(功能正常)'
                   : 'QueryUserUGC → ${items.length} 个条目(零配置,来自 Steam 会话)');
         } else {
+          // Steam 的 breakpad/minidump/API 等 stderr 属正常输出,不当错误刷屏
+          final noise = RegExp(r'minidump|breakpad|API loaded|SetMinidump');
           for (final line in errLines) {
-            log(LogLevel.error, '[helper] $line');
+            if (!noise.hasMatch(line)) log(LogLevel.warn, '[helper] $line');
           }
-          log(LogLevel.error,
-              '拉取名下条目失败:${error ?? '助手异常退出(exit $code),详见上方 [helper] 日志'}');
+          log(LogLevel.warn,
+              '拉取名下条目失败:${error ?? '助手退出($code)'} —— 不影响发布,稍后自动重试');
         }
       } catch (e) {
-        log(LogLevel.error, '拉取名下条目失败:$e');
+        proc?.kill();
+        log(LogLevel.warn, '拉取名下条目出错:$e —— 不影响发布');
       }
       notifyListeners();
       return;
