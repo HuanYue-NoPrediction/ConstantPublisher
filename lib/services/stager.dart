@@ -76,7 +76,9 @@ Future<StagePlan> planStage(Mod mod) async {
     // 官方规则:以 . 开头的目录不上传 —— 保留该行为
     final hiddenDir = rel.split('/').any((s) => s.startsWith('.') && s != '.modignore');
     String? reason;
-    if (hiddenDir || kDefaultIgnore.any((pat) => _match(rel, pat))) {
+    if (mod.pub.keep.any((pat) => _match(rel, pat))) {
+      reason = null; // keep 白名单:强制保留,压过一切忽略规则
+    } else if (hiddenDir || kDefaultIgnore.any((pat) => _match(rel, pat))) {
       reason = '默认忽略';
     } else if (custom.any((pat) => _match(rel, pat))) {
       reason = '.modignore';

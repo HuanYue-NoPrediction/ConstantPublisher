@@ -70,19 +70,26 @@ class DstPub {
   List<String> tags;
   List<String> ignore;
 
+  /// 白名单:命中的文件强制保留,优先级高于所有忽略规则
+  /// (用途示例:介绍模组里刻意携带工具发行包 zip)。
+  List<String> keep;
+
   DstPub({
     this.appId = 322330,
     this.visibility = 0,
     List<String>? tags,
     List<String>? ignore,
+    List<String>? keep,
   })  : tags = tags ?? [],
-        ignore = ignore ?? [];
+        ignore = ignore ?? [],
+        keep = keep ?? [];
 
   factory DstPub.fromJson(Map<String, dynamic> j) => DstPub(
         appId: (j['appid'] as num?)?.toInt() ?? 322330,
         visibility: (j['visibility'] as num?)?.toInt() ?? 0,
         tags: (j['tags'] as List?)?.cast<String>() ?? [],
         ignore: (j['ignore'] as List?)?.cast<String>() ?? [],
+        keep: (j['keep'] as List?)?.cast<String>() ?? [],
       );
 
   Map<String, dynamic> toJson() => {
@@ -90,6 +97,7 @@ class DstPub {
         'visibility': visibility,
         'tags': tags,
         'ignore': ignore,
+        'keep': keep,
       };
 }
 
