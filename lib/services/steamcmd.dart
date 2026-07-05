@@ -24,17 +24,28 @@ class PublishEvent {
   });
 }
 
+/// 一种语言的标题+简介。
+class LangEntry {
+  final String lang; // Steam 语言码,如 schinese / english
+  final String title;
+  final String desc;
+  const LangEntry(this.lang, this.title, this.desc);
+  Map<String, dynamic> toJson() =>
+      {'Language': lang, 'Title': title, 'Description': desc};
+}
+
 class PublishRequest {
   final int appId;
   final String? publishedFileId; // null/空 = 首次发布
   final String contentFolder;
   final String? previewFile;
-  final String title;
-  final String description; // BBCode
+  final String title; // 主语言标题(steamcmd 路径与回退用)
+  final String description; // 主语言 BBCode
   final String changeNote;
   final int visibility;
   final List<String> tags; // steamcmd 路径不支持;Steamworks 引擎走 SetItemTags
   final String version; // 写入 UGC metadata,供跨机器绑定时读回工坊版本
+  final List<LangEntry> languages; // 多语言;第一条带内容上传
 
   const PublishRequest({
     required this.appId,
@@ -47,6 +58,7 @@ class PublishRequest {
     required this.visibility,
     this.tags = const [],
     this.version = '',
+    this.languages = const [],
   });
 }
 

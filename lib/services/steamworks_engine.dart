@@ -38,6 +38,7 @@ class SteamworksEngine {
       'visibility': req.visibility,
       'tags': req.tags,
       'version': req.version,
+      'languages': req.languages.map((e) => e.toJson()).toList(),
     }));
 
     yield const PublishEvent(stage: '连接 Steam 客户端', progress: .12);

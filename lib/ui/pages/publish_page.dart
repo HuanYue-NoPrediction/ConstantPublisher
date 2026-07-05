@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import '../../models/mod.dart';
 import '../../services/draft_store.dart';
 import '../../services/stager.dart';
+import '../../services/steamcmd.dart';
 import '../../services/workshop_api.dart';
 import '../../state/app_state.dart';
 import '../../theme.dart';
@@ -22,8 +23,19 @@ class PublishPage extends StatefulWidget {
   State<PublishPage> createState() => _PublishPageState();
 }
 
+/// Steam 工坊支持的语言(码 → 中文名),简介/标题可按语言分开填。
+const Map<String, String> kSteamLangs = {
+  'schinese': '简体中文',
+  'english': 'English',
+  'tchinese': '繁體中文',
+  'koreana': '한국어',
+  'japanese': '日本語',
+  'russian': 'Русский',
+};
+
 class _PublishPageState extends State<PublishPage> {
   final _verCtrl = TextEditingController();
+  final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
   final _tagCtrl = TextEditingController();
@@ -31,6 +43,11 @@ class _PublishPageState extends State<PublishPage> {
   int _visibility = 0;
   List<String> _tags = [];
   bool _descPreview = false;
+
+  // 多语言:每种语言各自的标题/简介;当前编辑的语言由 _curLang 指定
+  String _curLang = 'schinese';
+  final Map<String, String> _titles = {};
+  final Map<String, String> _descs = {};
 
   String _loadedKey = ''; // '内容路径|目标id',变化时重载表单
   String _contentPath = '';
@@ -42,27 +59,66 @@ class _PublishPageState extends State<PublishPage> {
   void dispose() {
     _debounce?.cancel();
     _verCtrl.dispose();
+    _titleCtrl.dispose();
     _descCtrl.dispose();
     _noteCtrl.dispose();
     _tagCtrl.dispose();
     super.dispose();
   }
 
+  // 把当前语言的输入回存到映射
+  void _stashCurrentLang() {
+    _titles[_curLang] = _titleCtrl.text;
+    _descs[_curLang] = _descCtrl.text;
+  }
+
+  // 切换编辑语言:先回存当前,再载入目标语言
+  void _switchLang(String lang) {
+    _stashCurrentLang();
+    _curLang = lang;
+    _titleCtrl.text = _titles[lang] ?? '';
+    _descCtrl.text = _descs[lang] ?? '';
+    setState(() {});
+  }
+
+  // 收集所有非空语言,主语言(当前有内容者优先,再退简体中文/首个)排第一
+  List<LangEntry> _collectLangs() {
+    _stashCurrentLang();
+    final entries = <LangEntry>[];
+    for (final code in kSteamLangs.keys) {
+      final t = (_titles[code] ?? '').trim();
+      final d = (_descs[code] ?? '').trim();
+      if (t.isNotEmpty || d.isNotEmpty) entries.add(LangEntry(code, t, d));
+    }
+    if (entries.isEmpty) return [];
+    // 当前正在编辑且有内容的语言作为主语言(带内容上传)
+    entries.sort((a, b) {
+      if (a.lang == _curLang) return -1;
+      if (b.lang == _curLang) return 1;
+      return 0;
+    });
+    return entries;
+  }
+
   /// 内容文件夹或发布目标变化时:重置默认值,再叠加草稿。
   Future<void> _loadFor(Mod mod, WorkshopItemRemote? target) async {
     _contentPath = mod.path;
     _verCtrl.text = mod.info.version;
-    // 更新已发布条目时,简介默认取工坊现有全文(在其基础上改),否则用本地 modinfo
-    _descCtrl.text = (target != null && target.description.isNotEmpty)
-        ? target.description
-        : mod.info.description;
     _noteCtrl.text = '';
-    // 更新时预填工坊现有标签(去掉 version: —— 它由版本号自动生成),保留分类标签
     _tags = target != null
         ? target.tags.where((t) => !t.startsWith('version:')).toList()
         : List.of(mod.pub.tags);
     _visibility = mod.pub.visibility;
     _plan = null;
+
+    // 多语言默认:主语言(简体中文)标题=modinfo 名,简介=工坊现有/本地
+    _titles.clear();
+    _descs.clear();
+    _curLang = 'schinese';
+    _titles['schinese'] = mod.info.name;
+    _descs['schinese'] = (target != null && target.description.isNotEmpty)
+        ? target.description
+        : mod.info.description;
 
     final d = await DraftStore.load(mod.path);
     if (d != null) {
@@ -70,12 +126,24 @@ class _PublishPageState extends State<PublishPage> {
       _visibility = d.visibility;
       _tags = List.of(d.tags);
       if (d.changeNote.isNotEmpty) _noteCtrl.text = d.changeNote;
-      if (d.description.isNotEmpty) _descCtrl.text = d.description;
-      _draftStamp =
-          '草稿已恢复(保存于 ${_fmtTime(d.savedAt)})';
+      // 优先用草稿里的多语言映射;老草稿只有单份 description 则并入主语言
+      if (d.titles.isNotEmpty || d.descs.isNotEmpty) {
+        _titles
+          ..clear()
+          ..addAll(d.titles);
+        _descs
+          ..clear()
+          ..addAll(d.descs);
+        if (d.curLang.isNotEmpty) _curLang = d.curLang;
+      } else if (d.description.isNotEmpty) {
+        _descs['schinese'] = d.description;
+      }
+      _draftStamp = '草稿已恢复(保存于 ${_fmtTime(d.savedAt)})';
     } else {
       _draftStamp = '编辑内容会自动保存为草稿 —— 上传失败也不会丢';
     }
+    _titleCtrl.text = _titles[_curLang] ?? '';
+    _descCtrl.text = _descs[_curLang] ?? '';
     _refreshPlan(mod);
     if (mounted) setState(() {});
   }
@@ -96,12 +164,15 @@ class _PublishPageState extends State<PublishPage> {
   Future<void> _saveDraft() async {
     final path = _contentPath;
     if (path.isEmpty) return;
+    _stashCurrentLang();
     final d = Draft(
       version: _verCtrl.text,
       visibility: _visibility,
       tags: _tags,
       changeNote: _noteCtrl.text,
-      description: _descCtrl.text,
+      curLang: _curLang,
+      titles: Map.of(_titles),
+      descs: Map.of(_descs),
     );
     await DraftStore.save(path, d);
     if (mounted) {
@@ -348,59 +419,104 @@ class _PublishPageState extends State<PublishPage> {
         ),
         const SizedBox(height: 14),
         SectionCard(
-          title: '简介',
-          subtitle: '工坊详情页正文 · 支持 BBCode',
-          trailing: SegmentedButton<bool>(
-            style: const ButtonStyle(
-                visualDensity: VisualDensity.compact),
-            segments: const [
-              ButtonSegment(value: false, label: Text('编写')),
-              ButtonSegment(value: true, label: Text('预览')),
-            ],
-            selected: {_descPreview},
-            onSelectionChanged: (s) =>
-                setState(() => _descPreview = s.first),
-          ),
-          child: _descPreview
-              ? Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: scheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(10),
+          title: '工坊页面',
+          subtitle: '标题与简介按语言分开填,发布时各语言分别提交(留空的语言不提交)',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 语言切换:有内容的语言标 ●
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final e in kSteamLangs.entries)
+                    ChoiceChip(
+                      label: Text(
+                        ((_titles[e.key]?.trim().isNotEmpty ?? false) ||
+                                (_descs[e.key]?.trim().isNotEmpty ?? false))
+                            ? '● ${e.value}'
+                            : e.value,
+                      ),
+                      selected: _curLang == e.key,
+                      onSelected: (_) => _switchLang(e.key),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              // 标题(工坊显示名,按语言)
+              TextField(
+                controller: _titleCtrl,
+                onChanged: (_) => _saveDraftSoon(),
+                decoration: InputDecoration(
+                  labelText: '标题 · ${kSteamLangs[_curLang]}',
+                  hintText: '工坊显示名(默认取 modinfo 的 name)',
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 14),
+              // 简介(BBCode,按语言)
+              Row(
+                children: [
+                  Text('简介(BBCode)· ${kSteamLangs[_curLang]}',
+                      style: TextStyle(
+                          fontSize: 12.5, color: scheme.onSurfaceVariant)),
+                  const Spacer(),
+                  SegmentedButton<bool>(
+                    style: const ButtonStyle(
+                        visualDensity: VisualDensity.compact),
+                    segments: const [
+                      ButtonSegment(value: false, label: Text('编写')),
+                      ButtonSegment(value: true, label: Text('预览')),
+                    ],
+                    selected: {_descPreview},
+                    onSelectionChanged: (s) =>
+                        setState(() => _descPreview = s.first),
                   ),
-                  child: BBCodePreview(_descCtrl.text),
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Wrap(
-                      spacing: 5,
-                      runSpacing: 5,
+                ],
+              ),
+              const SizedBox(height: 8),
+              _descPreview
+                  ? Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: scheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: BBCodePreview(_descCtrl.text),
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _bbBtn('B', '[b]', '[/b]'),
-                        _bbBtn('I', '[i]', '[/i]'),
-                        _bbBtn('U', '[u]', '[/u]'),
-                        _bbBtn('S', '[strike]', '[/strike]'),
-                        _bbBtn('H1', '[h1]', '[/h1]'),
-                        _bbBtn('列表', '[list]\n[*]', '\n[/list]'),
-                        _bbBtn('链接', '[url=https://]', '[/url]'),
-                        _bbBtn('图片', '[img]', '[/img]'),
-                        _bbBtn('剧透', '[spoiler]', '[/spoiler]'),
+                        Wrap(
+                          spacing: 5,
+                          runSpacing: 5,
+                          children: [
+                            _bbBtn('B', '[b]', '[/b]'),
+                            _bbBtn('I', '[i]', '[/i]'),
+                            _bbBtn('U', '[u]', '[/u]'),
+                            _bbBtn('S', '[strike]', '[/strike]'),
+                            _bbBtn('H1', '[h1]', '[/h1]'),
+                            _bbBtn('列表', '[list]\n[*]', '\n[/list]'),
+                            _bbBtn('链接', '[url=https://]', '[/url]'),
+                            _bbBtn('图片', '[img]', '[/img]'),
+                            _bbBtn('剧透', '[spoiler]', '[/spoiler]'),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _descCtrl,
+                          onChanged: (_) => _saveDraftSoon(),
+                          maxLines: 8,
+                          style: const TextStyle(
+                              fontFamily: 'monospace', fontSize: 13),
+                          decoration: const InputDecoration(
+                              border: OutlineInputBorder()),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _descCtrl,
-                      onChanged: (_) => _saveDraftSoon(),
-                      maxLines: 8,
-                      style: const TextStyle(
-                          fontFamily: 'monospace', fontSize: 13),
-                      decoration: const InputDecoration(
-                          border: OutlineInputBorder()),
-                    ),
-                  ],
-                ),
+            ],
+          ),
         ),
         const SizedBox(height: 14),
         SectionCard(
@@ -742,11 +858,16 @@ class _PublishPageState extends State<PublishPage> {
                     state.busy || (!isNew && wsVersion.isNotEmpty && !verOk)
                         ? null
                         : () async {
+                            final langs = _collectLangs();
+                            if (langs.isEmpty || langs.first.title.isEmpty) {
+                              toast(context, '至少给主语言填一个标题');
+                              return;
+                            }
                             final ok = await state.publish(
                               mod: mod,
                               targetId: targetId,
                               version: _verCtrl.text.trim(),
-                              description: _descCtrl.text,
+                              languages: langs,
                               changeNote: _noteCtrl.text,
                               visibility: _visibility,
                               tags: List.of(_tags),

@@ -12,6 +12,8 @@ using Steamworks;
 // 全程不接触、不存储任何用户凭据 —— 身份来自 Steam 客户端本身。
 internal static class Program
 {
+    private sealed record LangEntry(string Language, string Title, string Description);
+
     private sealed record Request(
         uint AppId,
         ulong PublishedFileId,
@@ -22,7 +24,8 @@ internal static class Program
         string ChangeNote,
         int Visibility,
         string[]? Tags,
-        string? Version);
+        string? Version,
+        LangEntry[]? Languages); // 多语言:每种语言各自的标题/简介;第一条带内容上传
 
     private static bool _createDone;
     private static bool _submitDone;
@@ -170,62 +173,66 @@ internal static class Program
             }
         }
 
-        Emit(new { @event = "stage", stage = "StartItemUpdate · 填充元数据" });
-        var h = SteamUGC.StartItemUpdate(appId, fileId);
-        SteamUGC.SetItemTitle(h, req.Title);
-        SteamUGC.SetItemDescription(h, req.Description);
-        SteamUGC.SetItemContent(h, req.ContentFolder);
-        if (!string.IsNullOrEmpty(req.PreviewFile))
-        {
-            SteamUGC.SetItemPreview(h, req.PreviewFile);
-        }
-        SteamUGC.SetItemVisibility(h, (ERemoteStoragePublishedFileVisibility)req.Visibility);
-        // 标签:保留传入的分类标签,并把 version:<版本> 作为普通标签写入
-        // ——DST 就是靠这个 version:X 标签在工坊页展示模组版本(SetItemTags 会整体替换)
-        var tagList = new List<string>();
-        if (req.Tags != null) tagList.AddRange(req.Tags);
-        tagList.RemoveAll(t =>
-            t.StartsWith("version:", StringComparison.OrdinalIgnoreCase));
-        if (!string.IsNullOrEmpty(req.Version))
-        {
-            tagList.Add("version:" + req.Version);
-        }
-        if (tagList.Count > 0 && !SteamUGC.SetItemTags(h, tagList))
-        {
-            Emit(new { @event = "log", message = "警告:SetItemTags 返回 false,部分标签可能未被接受" });
-        }
-        if (!string.IsNullOrEmpty(req.Version))
-        {
-            // 版本也写进 UGC metadata(供 list 读回做版本比较,不依赖标签)
-            SteamUGC.SetItemMetadata(h, req.Version);
-        }
+        // 语言列表:至少一条(默认用 Title/Description);第一条带内容,其余仅更新该语言的标题/简介
+        List<LangEntry> langs = (req.Languages != null && req.Languages.Length > 0)
+            ? new List<LangEntry>(req.Languages)
+            : new List<LangEntry> { new("english", req.Title, req.Description) };
 
-        Emit(new { @event = "stage", stage = "SubmitItemUpdate · 开始上传" });
-        var sub = SteamUGC.SubmitItemUpdate(h, req.ChangeNote);
-        _submitCR = CallResult<SubmitItemUpdateResult_t>.Create(OnSubmit);
-        _submitCR.Set(sub);
-
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-        while (!_submitDone)
+        for (var li = 0; li < langs.Count; li++)
         {
-            SteamAPI.RunCallbacks();
-            var status = SteamUGC.GetItemUpdateProgress(h, out ulong done, out ulong total);
-            if (total > 0)
+            var L = langs[li];
+            var withContent = li == 0; // 只有首条上传内容,其余是纯元数据更新(快)
+            Emit(new { @event = "stage", stage = withContent
+                ? $"上传内容 · 语言 {L.Language}"
+                : $"更新 {L.Language} 语言的标题/简介" });
+
+            var h = SteamUGC.StartItemUpdate(appId, fileId);
+            SteamUGC.SetItemUpdateLanguage(h, L.Language);
+            SteamUGC.SetItemTitle(h, L.Title);
+            SteamUGC.SetItemDescription(h, L.Description);
+
+            if (withContent)
             {
-                Emit(new { @event = "progress", status = status.ToString(), done, total });
+                SteamUGC.SetItemContent(h, req.ContentFolder);
+                if (!string.IsNullOrEmpty(req.PreviewFile))
+                    SteamUGC.SetItemPreview(h, req.PreviewFile);
+                SteamUGC.SetItemVisibility(h, (ERemoteStoragePublishedFileVisibility)req.Visibility);
+                // 标签:SetItemTags 整体替换,把 version:<版本> 一并写入
+                var tagList = new List<string>();
+                if (req.Tags != null) tagList.AddRange(req.Tags);
+                tagList.RemoveAll(t => t.StartsWith("version:", StringComparison.OrdinalIgnoreCase));
+                if (!string.IsNullOrEmpty(req.Version)) tagList.Add("version:" + req.Version);
+                if (tagList.Count > 0 && !SteamUGC.SetItemTags(h, tagList))
+                    Emit(new { @event = "log", message = "警告:SetItemTags 返回 false" });
+                if (!string.IsNullOrEmpty(req.Version))
+                    SteamUGC.SetItemMetadata(h, req.Version);
             }
-            if (sw.Elapsed > TimeSpan.FromMinutes(30))
+
+            _submitDone = false;
+            var sub = SteamUGC.SubmitItemUpdate(h, req.ChangeNote);
+            _submitCR = CallResult<SubmitItemUpdateResult_t>.Create(OnSubmit);
+            _submitCR.Set(sub);
+
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            while (!_submitDone)
             {
-                Fail("上传超时(30 分钟)");
+                SteamAPI.RunCallbacks();
+                var status = SteamUGC.GetItemUpdateProgress(h, out ulong done, out ulong total);
+                if (total > 0)
+                    Emit(new { @event = "progress", status = status.ToString(), done, total });
+                if (sw.Elapsed > TimeSpan.FromMinutes(30)) { Fail("上传超时(30 分钟)"); return 0; }
+                Thread.Sleep(200);
+            }
+
+            if (_ioFailure || _submitResult.m_eResult != EResult.k_EResultOK)
+            {
+                var er = (int)_submitResult.m_eResult;
+                var hint = er == 2
+                    ? "(EResult 2 常见于 Steam 内容 CDN 网络问题:无法取回旧清单做增量,多为网络波动,稍后重试即可)"
+                    : "";
+                Fail($"SubmitItemUpdate 失败 · 语言 {L.Language} {hint}", er);
                 return 0;
             }
-            Thread.Sleep(200);
-        }
-
-        if (_ioFailure || _submitResult.m_eResult != EResult.k_EResultOK)
-        {
-            Fail("SubmitItemUpdate 失败", (int)_submitResult.m_eResult);
-            return 0;
         }
 
         Emit(new

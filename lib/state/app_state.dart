@@ -227,7 +227,7 @@ class AppState extends ChangeNotifier {
     required Mod mod,
     required String? targetId, // null = 新建条目
     required String version,
-    required String description,
+    required List<LangEntry> languages, // 至少一条;第一条为主语言(带内容)
     required String changeNote,
     required int visibility,
     required List<String> tags,
@@ -297,17 +297,21 @@ class AppState extends ChangeNotifier {
       final tagSet = <String>{mod.info.typeTag, ...tags};
       tagSet.removeWhere((t) => t.startsWith('version:'));
 
+      final primary = languages.isNotEmpty
+          ? languages.first
+          : LangEntry('english', mod.info.name, '');
       final req = PublishRequest(
         appId: mod.pub.appId,
         publishedFileId: targetId,
         contentFolder: staged.path,
         previewFile: preview,
-        title: mod.info.name,
-        description: description,
+        title: primary.title,
+        description: primary.desc,
         changeNote: changeNote,
         visibility: visibility,
         tags: tagSet.toList(),
         version: version,
+        languages: languages,
       );
       final Stream<PublishEvent> events = engine == 'steamworks'
           ? SteamworksEngine(helperPath: helperPath).publish(req)
