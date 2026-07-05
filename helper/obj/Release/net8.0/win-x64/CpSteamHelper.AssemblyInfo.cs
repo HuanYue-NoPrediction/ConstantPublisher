@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CpSteamHelper")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+deb979f5a889099c91ce51d42f65afa9e30e1e50")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4cce4cef2a201e6ec9728e49007061ba9eca6e81")]
 [assembly: System.Reflection.AssemblyProductAttribute("CpSteamHelper")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CpSteamHelper")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
