@@ -150,13 +150,23 @@ internal static class Program
             SteamUGC.SetItemPreview(h, req.PreviewFile);
         }
         SteamUGC.SetItemVisibility(h, (ERemoteStoragePublishedFileVisibility)req.Visibility);
-        if (req.Tags is { Length: > 0 })
+        // 标签:保留传入的分类标签,并把 version:<版本> 作为普通标签写入
+        // ——DST 就是靠这个 version:X 标签在工坊页展示模组版本(SetItemTags 会整体替换)
+        var tagList = new List<string>();
+        if (req.Tags != null) tagList.AddRange(req.Tags);
+        tagList.RemoveAll(t =>
+            t.StartsWith("version:", StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrEmpty(req.Version))
         {
-            SteamUGC.SetItemTags(h, new List<string>(req.Tags));
+            tagList.Add("version:" + req.Version);
+        }
+        if (tagList.Count > 0 && !SteamUGC.SetItemTags(h, tagList))
+        {
+            Emit(new { @event = "log", message = "警告:SetItemTags 返回 false,部分标签可能未被接受" });
         }
         if (!string.IsNullOrEmpty(req.Version))
         {
-            // 把 modinfo 版本写进 UGC metadata:list 模式读回,任何机器重新绑定都能拿到工坊版本
+            // 版本也写进 UGC metadata(供 list 读回做版本比较,不依赖标签)
             SteamUGC.SetItemMetadata(h, req.Version);
         }
 

@@ -198,4 +198,4 @@ E:\ConstantPublisher\helper\obj\Release\net8.0\win-x64\refint\CpSteamHelper.dll
 E:\ConstantPublisher\helper\obj\Release\net8.0\win-x64\CpSteamHelper.pdb
 E:\ConstantPublisher\helper\obj\Release\net8.0\win-x64\CpSteamHelper.genruntimeconfig.cache
 E:\ConstantPublisher\helper\obj\Release\net8.0\win-x64\ref\CpSteamHelper.dll
-E:\ConstantPublisher\helper\bin\Release\net8.0\win-x64\native\steam_api64.dll
+E:\ConstantPublisher\helper\bin\Release\net8.0\win-x64\steam_api64.dll

@@ -59,7 +59,10 @@ class _PublishPageState extends State<PublishPage> {
         ? target.description
         : mod.info.description;
     _noteCtrl.text = '';
-    _tags = List.of(mod.pub.tags);
+    // 更新时预填工坊现有标签(去掉 version: —— 它由版本号自动生成),保留分类标签
+    _tags = target != null
+        ? target.tags.where((t) => !t.startsWith('version:')).toList()
+        : List.of(mod.pub.tags);
     _visibility = mod.pub.visibility;
     _manualChannel = false;
     _channel = detectChannel(mod.info.version);

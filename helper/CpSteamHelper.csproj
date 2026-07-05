@@ -20,8 +20,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Valve 的 Steamworks 再分发件,必须以松散文件形式放在 exe 旁(不打进单文件包) -->
-    <None Include="native\steam_api64.dll" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Valve 的 Steamworks 再分发件,必须以松散文件形式放在 exe 旁(不打进单文件包)。
+         Content + CopyToPublishDirectory 确保 dotnet publish 也会带出它 -->
+    <Content Include="native\steam_api64.dll">
+      <Link>steam_api64.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>
