@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 
 import '../../models/mod.dart';
@@ -402,6 +404,24 @@ class _PublishPageState extends State<PublishPage> {
     );
   }
 
+  Future<void> _pickPreview(Mod mod) async {
+    const group = XTypeGroup(
+        label: '图片', extensions: ['jpg', 'jpeg', 'png', 'gif']);
+    final f = await openFile(acceptedTypeGroups: [group]);
+    if (f == null) return;
+    final ext = p.extension(f.path).toLowerCase();
+    final name = ext == '.png'
+        ? 'preview.png'
+        : ext == '.gif'
+            ? 'preview.gif'
+            : 'preview.jpg';
+    await File(f.path).copy(p.join(mod.path, name));
+    if (mounted) {
+      setState(() {});
+      toast(context, '预览图已更新为 $name');
+    }
+  }
+
   Widget _bbBtn(String label, String open, String close) {
     return OutlinedButton(
       style: OutlinedButton.styleFrom(
@@ -438,6 +458,71 @@ class _PublishPageState extends State<PublishPage> {
 
     return Column(
       children: [
+        SectionCard(
+          title: '预览图',
+          subtitle: '工坊封面 · JPG/PNG/GIF · 需小于 1 MB',
+          trailing: TextButton(
+            onPressed: () => _pickPreview(mod),
+            child: const Text('更换…'),
+          ),
+          child: Builder(builder: (context) {
+            final pv = mod.preview;
+            if (pv == null) {
+              return Text(
+                '未找到预览图 —— 往模组文件夹放一张 preview.jpg,或点右上「更换…」选择',
+                style: TextStyle(
+                    fontSize: 12.5, color: scheme.onSurfaceVariant),
+              );
+            }
+            final stat = pv.statSync();
+            final kb = (stat.size / 1024).round();
+            final okSize = stat.size < 1024 * 1024;
+            return Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.file(
+                    pv,
+                    key: ValueKey('${pv.path}-${stat.modified}'),
+                    width: 72,
+                    height: 72,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      width: 72,
+                      height: 72,
+                      color: scheme.surfaceContainerHighest,
+                      child: const Icon(Icons.broken_image_outlined),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(p.basename(pv.path),
+                          style: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600)),
+                      Text('$kb KB',
+                          style: TextStyle(
+                              fontSize: 11.5,
+                              fontFamily: 'monospace',
+                              color: scheme.onSurfaceVariant)),
+                      const SizedBox(height: 2),
+                      Text(
+                        okSize ? '✓ 小于 1 MB 上限' : '✗ 超过 1 MB,Steam 会拒收',
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: okSize ? sem.success : scheme.error),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          }),
+        ),
+        const SizedBox(height: 14),
         SectionCard(
           title: '将要上传',
           subtitle: '干净暂存副本 · .modignore 与默认规则已生效',

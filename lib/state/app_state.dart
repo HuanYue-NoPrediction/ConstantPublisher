@@ -280,12 +280,14 @@ class AppState extends ChangeNotifier {
           '已暂存 ${plan.kept.length} 项(忽略 ${plan.dropped.length} 项)→ ${staged.path}');
 
       String? preview;
-      if (await mod.previewFile.exists()) {
-        final len = await mod.previewFile.length();
+      final pv = mod.preview;
+      if (pv != null) {
+        final len = await pv.length();
         if (len >= 1024 * 1024) {
-          throw Exception('preview.jpg ${(len / 1024).round()} KB ≥ 1MB 上限');
+          throw Exception(
+              '预览图 ${(len / 1024).round()} KB ≥ 1MB 上限,Steam 会拒收');
         }
-        preview = mod.previewFile.path;
+        preview = pv.path;
       }
 
       final req = PublishRequest(

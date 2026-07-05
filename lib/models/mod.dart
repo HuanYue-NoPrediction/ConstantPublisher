@@ -104,7 +104,18 @@ class Mod {
 
   File get modinfoFile => File(p.join(dir.path, 'modinfo.lua'));
   File get pubFile => File(p.join(dir.path, 'dstpub.json'));
-  File get previewFile => File(p.join(dir.path, 'preview.jpg'));
+
+  /// 工坊封面:jpg/png/gif 均可,同时存在多个时取最近修改的(「更换」后新图生效)。
+  File? get preview {
+    final cands = [
+      for (final n in ['preview.jpg', 'preview.png', 'preview.gif'])
+        File(p.join(dir.path, n)),
+    ].where((f) => f.existsSync()).toList();
+    if (cands.isEmpty) return null;
+    cands.sort(
+        (a, b) => b.statSync().modified.compareTo(a.statSync().modified));
+    return cands.first;
+  }
 
   static Future<Mod?> load(Directory d) async {
     final mi = File(p.join(d.path, 'modinfo.lua'));
