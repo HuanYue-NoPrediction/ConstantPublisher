@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../services/workshop_api.dart';
 import '../../state/app_state.dart';
 import '../../theme.dart';
 import '../widgets/bits.dart';
@@ -13,40 +15,37 @@ class DashboardPage extends StatelessWidget {
     final state = context.watch<AppState>();
     final scheme = Theme.of(context).colorScheme;
     final sem = SemanticColors.of(context);
-    final totalSubs =
-        state.remoteItems.fold<int>(0, (a, it) => a + it.subs);
+    final items = state.remoteItems;
+
+    final totalSubs = items.fold<int>(0, (a, it) => a + it.subs);
+    final totalFav = items.fold<int>(0, (a, it) => a + it.favorites);
+    final totalComments = items.fold<int>(0, (a, it) => a + it.comments);
+    final up = items.fold<int>(0, (a, it) => a + it.votesUp);
+    final down = items.fold<int>(0, (a, it) => a + it.votesDown);
+    final ratio = (up + down) == 0 ? null : up / (up + down);
+
+    final top = [...items]..sort((a, b) => b.subs.compareTo(a.subs));
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 18, 24, 32),
       children: [
         Text('仪表盘', style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 18),
-        // 环境状态卡
+
+        // 环境状态
         SectionCard(
           title: state.steamReady ? '发布环境就绪' : '发布环境未配置',
           subtitle: state.engine == 'steamworks'
               ? (state.steamReady
-                  ? 'Steamworks 引擎 · 开着 Steam 即可发布,免账号免密码'
+                  ? 'Steamworks 引擎 · 开着 Steam 即可发布'
                   : '未找到 Steamworks 助手 —— 请使用完整发行包,或到设置页切换引擎')
               : (state.steamReady
-                  ? '${state.steamUser} · steamcmd 已找到 · 凭据依赖本机缓存'
+                  ? '${state.steamUser} · steamcmd 已配置'
                   : '到设置页配置 steamcmd 路径与 Steam 账号'),
           trailing: Icon(
             state.steamReady ? Icons.check_circle : Icons.error_outline,
             color: state.steamReady ? sem.success : scheme.error,
           ),
-          child: Row(
-            children: [
-              _Stat(label: '本地文件夹', value: '${state.mods.length}'),
-              _Stat(label: '名下工坊条目', value: '${state.remoteItems.length}'),
-              _Stat(
-                  label: '总订阅', value: '${totalSubs}'),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        SectionCard(
-          title: '快速开始',
           child: Row(
             children: [
               FilledButton.tonalIcon(
@@ -56,15 +55,74 @@ class DashboardPage extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               OutlinedButton.icon(
-                onPressed: () => state.goto(1),
-                icon: const Icon(Icons.public),
-                label: const Text('查看名下条目'),
+                onPressed: state.refreshRemote,
+                icon: const Icon(Icons.refresh),
+                label: const Text('刷新数据'),
               ),
             ],
           ),
         ),
         const SizedBox(height: 14),
-        if (state.busy && state.progress != null)
+
+        // 聚合数据
+        if (items.isEmpty)
+          SectionCard(
+            title: '工坊数据',
+            child: Text(
+              state.steamReady
+                  ? '点上方「刷新数据」拉取名下工坊条目'
+                  : '连接 Steam 后即可查看订阅、收藏、评论等数据',
+              style: TextStyle(color: scheme.onSurfaceVariant),
+            ),
+          )
+        else ...[
+          Row(children: [
+            _Metric(
+                icon: Icons.people_alt_outlined,
+                label: '总订阅',
+                value: _fmt(totalSubs),
+                tint: scheme.primary),
+            const SizedBox(width: 12),
+            _Metric(
+                icon: Icons.star_outline,
+                label: '总收藏',
+                value: _fmt(totalFav),
+                tint: sem.warn),
+          ]),
+          const SizedBox(height: 12),
+          Row(children: [
+            _Metric(
+                icon: Icons.mode_comment_outlined,
+                label: '总评论',
+                value: _fmt(totalComments),
+                tint: scheme.tertiary),
+            const SizedBox(width: 12),
+            _Metric(
+                icon: Icons.thumb_up_outlined,
+                label: '好评率',
+                value: ratio == null
+                    ? '—'
+                    : '${(ratio * 100).round()}%',
+                sub: ratio == null ? '暂无评价' : '$up 赞 · $down 踩',
+                tint: sem.success),
+          ]),
+          const SizedBox(height: 14),
+
+          // 模组排行
+          SectionCard(
+            title: '模组排行',
+            subtitle: '按订阅数,共 ${items.length} 个',
+            child: Column(
+              children: [
+                for (final it in top.take(6))
+                  _RankRow(item: it, scheme: scheme, sem: sem),
+              ],
+            ),
+          ),
+        ],
+
+        if (state.busy && state.progress != null) ...[
+          const SizedBox(height: 14),
           SectionCard(
             title: '发布进行中',
             child: Column(
@@ -76,39 +134,139 @@ class DashboardPage extends StatelessWidget {
               ],
             ),
           ),
+        ],
       ],
     );
   }
+
+  static String _fmt(int n) {
+    if (n >= 10000) return '${(n / 10000).toStringAsFixed(1)}w';
+    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}k';
+    return '$n';
+  }
 }
 
-class _Stat extends StatelessWidget {
+class _Metric extends StatelessWidget {
+  final IconData icon;
   final String label;
   final String value;
-  const _Stat({required this.label, required this.value});
+  final String? sub;
+  final Color tint;
+  const _Metric({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.tint,
+    this.sub,
+  });
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Expanded(
-      child: Container(
-        margin: const EdgeInsets.only(right: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainer,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(value,
-                style: const TextStyle(
-                    fontSize: 24, fontWeight: FontWeight.w600)),
-            Text(label,
-                style:
-                    TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
-          ],
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                Icon(icon, size: 17, color: tint),
+                const SizedBox(width: 7),
+                Text(label,
+                    style:
+                        TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant)),
+              ]),
+              const SizedBox(height: 8),
+              Text(value,
+                  style: const TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w600,
+                      fontFeatures: [FontFeature.tabularFigures()])),
+              if (sub != null)
+                Text(sub!,
+                    style: TextStyle(
+                        fontSize: 11, color: scheme.onSurfaceVariant)),
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+class _RankRow extends StatelessWidget {
+  final WorkshopItemRemote item;
+  final ColorScheme scheme;
+  final SemanticColors sem;
+  const _RankRow(
+      {required this.item, required this.scheme, required this.sem});
+
+  @override
+  Widget build(BuildContext context) {
+    final dim = TextStyle(
+        fontSize: 12,
+        color: scheme.onSurfaceVariant,
+        fontFeatures: const [FontFeature.tabularFigures()]);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(7),
+            child: item.previewUrl.isEmpty
+                ? Container(
+                    width: 38,
+                    height: 38,
+                    color: scheme.surfaceContainerHighest,
+                    child: Icon(Icons.cloud_outlined,
+                        size: 18, color: scheme.onSurfaceVariant))
+                : Image.network(item.previewUrl,
+                    width: 38,
+                    height: 38,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                        width: 38,
+                        height: 38,
+                        color: scheme.surfaceContainerHighest)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(item.title,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    fontSize: 13.5, fontWeight: FontWeight.w600)),
+          ),
+          const SizedBox(width: 10),
+          _stat(Icons.people_alt_outlined, DashboardPage._fmt(item.subs), dim),
+          const SizedBox(width: 12),
+          _stat(Icons.mode_comment_outlined,
+              DashboardPage._fmt(item.comments), dim),
+          const SizedBox(width: 12),
+          if (item.votesUp + item.votesDown > 0)
+            _stat(
+                Icons.thumb_up_outlined,
+                '${(item.votesUp / (item.votesUp + item.votesDown) * 100).round()}%',
+                dim),
+          const SizedBox(width: 4),
+          IconButton(
+            tooltip: '在工坊查看评论',
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.open_in_new, size: 16),
+            onPressed: () => launchUrl(Uri.parse(
+                'https://steamcommunity.com/sharedfiles/filedetails/comments/${item.id}')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _stat(IconData icon, String v, TextStyle style) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: style.color),
+          const SizedBox(width: 3),
+          Text(v, style: style),
+        ],
+      );
 }

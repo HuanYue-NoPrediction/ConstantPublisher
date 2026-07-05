@@ -8,6 +8,12 @@ class WorkshopItemRemote {
   final String id;
   final String title;
   final int subs;
+  final int favorites;
+  final int comments;
+  final int views;
+  final int votesUp;
+  final int votesDown;
+  final double score; // 0~1
   final DateTime? updated;
   final List<String> tags;
 
@@ -24,12 +30,24 @@ class WorkshopItemRemote {
     required this.id,
     required this.title,
     required this.subs,
+    this.favorites = 0,
+    this.comments = 0,
+    this.views = 0,
+    this.votesUp = 0,
+    this.votesDown = 0,
+    this.score = 0,
     this.updated,
     this.tags = const [],
     this.version = '',
     this.previewUrl = '',
     this.description = '',
   });
+
+  /// 好评率:有投票才算,否则用 Steam 的综合评分。
+  double get rating {
+    final total = votesUp + votesDown;
+    return total > 0 ? votesUp / total : score;
+  }
 }
 
 /// metadata 里长得像版本号才认(防止其他工具写的任意内容混进来)。

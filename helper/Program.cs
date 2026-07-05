@@ -231,9 +231,12 @@ internal static class Program
                 {
                     continue;
                 }
-                ulong subs = 0;
-                SteamUGC.GetQueryUGCStatistic(_queryResult.m_handle, i,
-                    EItemStatistic.k_EItemStatistic_NumSubscriptions, out subs);
+                ulong Stat(EItemStatistic s)
+                {
+                    SteamUGC.GetQueryUGCStatistic(
+                        _queryResult.m_handle, i, s, out ulong v);
+                    return v;
+                }
                 SteamUGC.GetQueryUGCMetadata(_queryResult.m_handle, i,
                     out string meta, Constants.k_cchDeveloperMetadataMax);
                 SteamUGC.GetQueryUGCPreviewURL(_queryResult.m_handle, i,
@@ -243,7 +246,13 @@ internal static class Program
                     @event = "item",
                     id = d.m_nPublishedFileId.m_PublishedFileId.ToString(),
                     title = d.m_rgchTitle,
-                    subs,
+                    subs = Stat(EItemStatistic.k_EItemStatistic_NumSubscriptions),
+                    favorites = Stat(EItemStatistic.k_EItemStatistic_NumFavorites),
+                    comments = Stat(EItemStatistic.k_EItemStatistic_NumComments),
+                    views = Stat(EItemStatistic.k_EItemStatistic_NumUniqueWebsiteViews),
+                    votesUp = d.m_unVotesUp,
+                    votesDown = d.m_unVotesDown,
+                    score = d.m_flScore,
                     updated = d.m_rtimeUpdated,
                     visibility = (int)d.m_eVisibility,
                     tags = d.m_rgchTags, // 逗号分隔的工坊标签

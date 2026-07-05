@@ -364,6 +364,12 @@ class AppState extends ChangeNotifier {
                 id: j['id'].toString(),
                 title: j['title'] as String? ?? '(无标题)',
                 subs: (j['subs'] as num?)?.toInt() ?? 0,
+                favorites: (j['favorites'] as num?)?.toInt() ?? 0,
+                comments: (j['comments'] as num?)?.toInt() ?? 0,
+                views: (j['views'] as num?)?.toInt() ?? 0,
+                votesUp: (j['votesUp'] as num?)?.toInt() ?? 0,
+                votesDown: (j['votesDown'] as num?)?.toInt() ?? 0,
+                score: (j['score'] as num?)?.toDouble() ?? 0,
                 updated: j['updated'] != null && (j['updated'] as num) > 0
                     ? DateTime.fromMillisecondsSinceEpoch(
                         (j['updated'] as num).toInt() * 1000)
