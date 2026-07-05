@@ -147,7 +147,36 @@ class _PublishPageState extends State<PublishPage> {
     _titleCtrl.text = _titles[_curLang] ?? '';
     _descCtrl.text = _descs[_curLang] ?? '';
     _refreshPlan(mod);
+    // 更新已发布条目时,后台按语言拉取各语言底稿,填进尚为空的语言槽
+    if (target != null) _fetchLangBases(target.id, mod.path, target.id);
     if (mounted) setState(() {});
+  }
+
+  // 后台拉取该条目各语言底稿,只填当前仍为空的语言槽(不覆盖草稿/已填内容)
+  Future<void> _fetchLangBases(
+      String id, String contentPath, String? targetId) async {
+    final langs = await context.read<AppState>().fetchItemLangs(id);
+    if (!mounted || langs.isEmpty) return;
+    // 若期间已切走(内容或目标变了),放弃
+    if (_contentPath != contentPath || _loadedTargetId != targetId) return;
+    var changed = false;
+    for (final e in langs) {
+      if (!kSteamLangs.containsKey(e.lang)) continue;
+      if ((_titles[e.lang] ?? '').trim().isEmpty && e.title.isNotEmpty) {
+        _titles[e.lang] = e.title;
+        changed = true;
+      }
+      if ((_descs[e.lang] ?? '').trim().isEmpty && e.desc.isNotEmpty) {
+        _descs[e.lang] = e.desc;
+        changed = true;
+      }
+    }
+    if (changed && mounted) {
+      // 若当前正编辑的语言底稿刚被填上,同步到输入框
+      if ((_titleCtrl.text).isEmpty) _titleCtrl.text = _titles[_curLang] ?? '';
+      if ((_descCtrl.text).isEmpty) _descCtrl.text = _descs[_curLang] ?? '';
+      setState(() {});
+    }
   }
 
   Future<void> _refreshPlan(Mod mod) async {

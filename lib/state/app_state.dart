@@ -403,6 +403,31 @@ class AppState extends ChangeNotifier {
 
   bool _refreshing = false; // 单飞:同一时刻只允许一个 list 助手,避免多进程抢 Steam 会话
 
+  /// 取某条目各语言的标题/简介(多语言底稿)。仅 Steamworks 引擎可用。
+  Future<List<LangEntry>> fetchItemLangs(String id) async {
+    if (engine != 'steamworks' || !File(helperPath).existsSync()) return [];
+    final out = <LangEntry>[];
+    try {
+      final proc = await Process.start(helperPath, ['desc', id]);
+      await proc.stdin.close();
+      final killer = Timer(const Duration(seconds: 60), () => proc.kill());
+      await for (final line in proc.stdout
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())) {
+        try {
+          final j = jsonDecode(line) as Map<String, dynamic>;
+          if (j['event'] == 'lang') {
+            out.add(LangEntry(j['lang'] as String? ?? '',
+                j['title'] as String? ?? '', j['desc'] as String? ?? ''));
+          }
+        } catch (_) {}
+      }
+      await proc.exitCode;
+      killer.cancel();
+    } catch (_) {}
+    return out;
+  }
+
   Future<void> refreshRemote() async {
     if (_refreshing) return; // 已有拉取在进行,直接返回,不再起第二个助手
     _refreshing = true;

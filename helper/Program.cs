@@ -56,6 +56,18 @@ internal static class Program
     {
         Console.OutputEncoding = new UTF8Encoding(false);
 
+        // 模式四:desc <publishedfileid> —— 按各语言分别取该条目的标题/简介
+        // (list 只取默认语言;多语言编辑需要每种语言各自的底稿)
+        if (args.Length >= 2 && args[0] == "desc")
+        {
+            Environment.SetEnvironmentVariable("SteamAppId", LaunchAppId.ToString());
+            Environment.SetEnvironmentVariable("SteamGameId", LaunchAppId.ToString());
+            if (!TryInit(LaunchAppId)) return 0;
+            try { return RunDesc(ulong.Parse(args[1])); }
+            catch (Exception e) { Fail("取简介失败: " + e.Message); return 0; }
+            finally { SteamAPI.Shutdown(); }
+        }
+
         // 模式三:delete <publishedfileid> —— 删除工坊条目
         if (args.Length >= 2 && args[0] == "delete")
         {
@@ -242,6 +254,59 @@ internal static class Program
             publishedFileId = fileId.m_PublishedFileId.ToString(),
             needsLegalAgreement = _submitResult.m_bUserNeedsToAcceptWorkshopLegalAgreement,
         });
+        return 0;
+    }
+
+    // 按语言逐一查询单个条目的标题/简介。Steam 对没填某语言的项会回退到"默认语言",
+    // 故按内容频次去重:出现多次的那份=默认语言(仅归给它的真正拥有者,优先 english),
+    // 其余共享它的语言视为回退、跳过;只出现一次的才是该语言的真翻译。
+    private static int RunDesc(ulong id)
+    {
+        var langs = new[] { "schinese", "english", "tchinese", "koreana", "japanese", "russian" };
+        var results = new List<(string lang, string title, string desc)>();
+
+        foreach (var lang in langs)
+        {
+            var q = SteamUGC.CreateQueryUGCDetailsRequest(
+                new[] { new PublishedFileId_t(id) }, 1);
+            if (q.m_UGCQueryHandle == ulong.MaxValue) continue;
+            SteamUGC.SetLanguage(q, lang);
+            SteamUGC.SetReturnLongDescription(q, true);
+            _queryDone = false;
+            _queryCR = CallResult<SteamUGCQueryCompleted_t>.Create(OnQuery);
+            _queryCR.Set(SteamUGC.SendQueryUGCRequest(q));
+            if (!Pump(() => _queryDone, 20)) { SteamUGC.ReleaseQueryUGCRequest(q); continue; }
+            if (!_ioFailure && _queryResult.m_eResult == EResult.k_EResultOK &&
+                _queryResult.m_unNumResultsReturned > 0 &&
+                SteamUGC.GetQueryUGCResult(_queryResult.m_handle, 0, out SteamUGCDetails_t d))
+            {
+                results.Add((lang, d.m_rgchTitle ?? "", d.m_rgchDescription ?? ""));
+            }
+            SteamUGC.ReleaseQueryUGCRequest(q);
+        }
+
+        // 频次:出现 >1 次的 desc 是默认语言的回退;归属优先 english,否则该组第一个
+        var freq = new Dictionary<string, int>();
+        foreach (var r in results)
+            freq[r.desc] = freq.TryGetValue(r.desc, out var c) ? c + 1 : 1;
+        string? sharedDesc = null;
+        var maxCount = 1;
+        foreach (var kv in freq)
+            if (kv.Value > maxCount) { maxCount = kv.Value; sharedDesc = kv.Key; }
+        string? sharedOwner = null;
+        if (sharedDesc != null)
+        {
+            var group = results.FindAll(r => r.desc == sharedDesc).ConvertAll(r => r.lang);
+            sharedOwner = group.Contains("english") ? "english" : group[0];
+        }
+
+        foreach (var r in results)
+        {
+            if (r.desc == sharedDesc && r.lang != sharedOwner) continue; // 回退,跳过
+            if (string.IsNullOrEmpty(r.desc) && string.IsNullOrEmpty(r.title)) continue;
+            Emit(new { @event = "lang", lang = r.lang, title = r.title, desc = r.desc });
+        }
+        Emit(new { @event = "result", ok = true });
         return 0;
     }
 
