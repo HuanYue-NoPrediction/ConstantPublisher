@@ -25,7 +25,12 @@ internal static class Program
         int Visibility,
         string[]? Tags,
         string? Version,
-        LangEntry[]? Languages); // 多语言:每种语言各自的标题/简介;第一条带内容上传
+        LangEntry[]? Languages, // 多语言:每种语言各自的标题/简介;第一条带内容上传
+        bool? UpdateContent,
+        bool? UpdateText,
+        bool? UpdatePreview,
+        bool? UpdateTags,
+        bool? UpdateVisibility);
 
     private static bool _createDone;
     private static bool _submitDone;
@@ -185,8 +190,14 @@ internal static class Program
             }
         }
 
-        // 语言列表:至少一条(默认用 Title/Description);第一条带内容,其余仅更新该语言的标题/简介
-        List<LangEntry> langs = (req.Languages != null && req.Languages.Length > 0)
+        var isNew = req.PublishedFileId == 0;
+        var upContent = isNew || (req.UpdateContent ?? true);
+        var upText = isNew || (req.UpdateText ?? true);
+        var upPreview = isNew || (req.UpdatePreview ?? true);
+        var upTags = isNew || (req.UpdateTags ?? true);
+        var upVisibility = isNew || (req.UpdateVisibility ?? true);
+
+        List<LangEntry> langs = upText && req.Languages != null && req.Languages.Length > 0
             ? new List<LangEntry>(req.Languages)
             : new List<LangEntry> { new("english", req.Title, req.Description) };
 
@@ -195,28 +206,36 @@ internal static class Program
             var L = langs[li];
             var withContent = li == 0; // 只有首条上传内容,其余是纯元数据更新(快)
             Emit(new { @event = "stage", stage = withContent
-                ? $"上传内容 · 语言 {L.Language}"
+                ? (upContent ? $"上传内容 · 语言 {L.Language}" : "更新条目元数据")
                 : $"更新 {L.Language} 语言的标题/简介" });
 
             var h = SteamUGC.StartItemUpdate(appId, fileId);
-            SteamUGC.SetItemUpdateLanguage(h, L.Language);
-            SteamUGC.SetItemTitle(h, L.Title);
-            SteamUGC.SetItemDescription(h, L.Description);
+            if (upText)
+            {
+                SteamUGC.SetItemUpdateLanguage(h, L.Language);
+                SteamUGC.SetItemTitle(h, L.Title);
+                SteamUGC.SetItemDescription(h, L.Description);
+            }
 
             if (withContent)
             {
-                SteamUGC.SetItemContent(h, req.ContentFolder);
-                if (!string.IsNullOrEmpty(req.PreviewFile))
+                if (upContent)
+                    SteamUGC.SetItemContent(h, req.ContentFolder);
+                if (upPreview && !string.IsNullOrEmpty(req.PreviewFile))
                     SteamUGC.SetItemPreview(h, req.PreviewFile);
-                SteamUGC.SetItemVisibility(h, (ERemoteStoragePublishedFileVisibility)req.Visibility);
-                // 标签:SetItemTags 整体替换,把 version:<版本> 一并写入
-                var tagList = new List<string>();
-                if (req.Tags != null) tagList.AddRange(req.Tags);
-                tagList.RemoveAll(t => t.StartsWith("version:", StringComparison.OrdinalIgnoreCase));
-                if (!string.IsNullOrEmpty(req.Version)) tagList.Add("version:" + req.Version);
-                if (tagList.Count > 0 && !SteamUGC.SetItemTags(h, tagList))
-                    Emit(new { @event = "log", message = "警告:SetItemTags 返回 false" });
-                if (!string.IsNullOrEmpty(req.Version))
+                if (upVisibility)
+                    SteamUGC.SetItemVisibility(h, (ERemoteStoragePublishedFileVisibility)req.Visibility);
+                if (upContent || upTags)
+                {
+                    // 标签:SetItemTags 整体替换,把 version:<版本> 一并写入
+                    var tagList = new List<string>();
+                    if (req.Tags != null) tagList.AddRange(req.Tags);
+                    tagList.RemoveAll(t => t.StartsWith("version:", StringComparison.OrdinalIgnoreCase));
+                    if (!string.IsNullOrEmpty(req.Version)) tagList.Add("version:" + req.Version);
+                    if (tagList.Count > 0 && !SteamUGC.SetItemTags(h, tagList))
+                        Emit(new { @event = "log", message = "警告:SetItemTags 返回 false" });
+                }
+                if (upContent && !string.IsNullOrEmpty(req.Version))
                     SteamUGC.SetItemMetadata(h, req.Version);
             }
 

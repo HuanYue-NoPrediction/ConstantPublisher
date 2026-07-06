@@ -43,6 +43,7 @@ class _PublishPageState extends State<PublishPage> {
   int _visibility = 0;
   List<String> _tags = [];
   bool _descPreview = false;
+  final Set<String> _parts = {'content', 'text', 'preview', 'tags', 'visibility'};
 
   // 多语言:每种语言各自的标题/简介;当前编辑的语言由 _curLang 指定
   String _curLang = 'schinese';
@@ -324,6 +325,38 @@ class _PublishPageState extends State<PublishPage> {
           onChanged: (v) =>
               state.setPublishTarget(v == '__new__' ? null : v),
         ),
+        if (!isNew) ...[
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 7,
+            runSpacing: 7,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text('本次更新:',
+                  style: TextStyle(
+                      fontSize: 12.5, color: scheme.onSurfaceVariant)),
+              for (final (k, label) in const [
+                ('content', '内容文件'),
+                ('text', '标题与简介'),
+                ('preview', '封面图'),
+                ('tags', '标签'),
+                ('visibility', '可见性'),
+              ])
+                FilterChip(
+                  label: Text(label),
+                  selected: _parts.contains(k),
+                  visualDensity: VisualDensity.compact,
+                  onSelected: (v) => setState(() {
+                    if (v) {
+                      _parts.add(k);
+                    } else if (_parts.length > 1) {
+                      _parts.remove(k);
+                    }
+                  }),
+                ),
+            ],
+          ),
+        ],
         const SizedBox(height: 12),
         // 内容文件夹
         Row(
@@ -919,24 +952,29 @@ class _PublishPageState extends State<PublishPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               FilledButton.icon(
-                onPressed:
-                    state.busy || (!isNew && wsVersion.isNotEmpty && !verOk)
-                        ? null
-                        : () async {
-                            final langs = _collectLangs();
-                            if (langs.isEmpty || langs.first.title.isEmpty) {
-                              toast(context, '至少给主语言填一个标题');
-                              return;
-                            }
-                            final ok = await state.publish(
-                              mod: mod,
-                              targetId: targetId,
-                              version: _verCtrl.text.trim(),
-                              languages: langs,
-                              changeNote: _noteCtrl.text,
-                              visibility: _visibility,
-                              tags: List.of(_tags),
-                            );
+                onPressed: state.busy ||
+                        (!isNew &&
+                            _parts.contains('content') &&
+                            wsVersion.isNotEmpty &&
+                            !verOk)
+                    ? null
+                    : () async {
+                        final langs = _collectLangs();
+                        if ((isNew || _parts.contains('text')) &&
+                            (langs.isEmpty || langs.first.title.isEmpty)) {
+                          toast(context, '至少给主语言填一个标题');
+                          return;
+                        }
+                        final ok = await state.publish(
+                          mod: mod,
+                          targetId: targetId,
+                          version: _verCtrl.text.trim(),
+                          languages: langs,
+                          changeNote: _noteCtrl.text,
+                          visibility: _visibility,
+                          tags: List.of(_tags),
+                          parts: Set.of(_parts),
+                        );
                             if (ok) {
                               await DraftStore.clear(mod.path, targetId);
                               if (mounted) {

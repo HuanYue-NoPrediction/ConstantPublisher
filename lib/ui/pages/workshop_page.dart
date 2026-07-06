@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 
 import '../../services/workshop_api.dart';
 import '../../state/app_state.dart';
-import '../../theme.dart';
 import '../widgets/bits.dart';
 
 /// 工坊页:巡检 + 绑定管理。

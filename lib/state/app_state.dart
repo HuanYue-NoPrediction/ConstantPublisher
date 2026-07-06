@@ -282,7 +282,14 @@ class AppState extends ChangeNotifier {
     required String changeNote,
     required int visibility,
     required List<String> tags,
+    Set<String> parts = const {'content', 'text', 'preview', 'tags', 'visibility'},
   }) async {
+    final isNew = targetId == null;
+    final upContent = isNew || parts.contains('content');
+    final upText = isNew || parts.contains('text');
+    final upPreview = isNew || parts.contains('preview');
+    final upTags = isNew || parts.contains('tags');
+    final upVisibility = isNew || parts.contains('visibility');
     if (busy) return false;
     if (!steamReady) {
       log(
@@ -301,45 +308,53 @@ class AppState extends ChangeNotifier {
       if (!mod.info.valid) {
         throw Exception('modinfo.lua 无效:缺少 name 或 version');
       }
-      final wsVersion = targetId == null
-          ? ''
-          : (remoteItems
-                  .where((x) => x.id == targetId)
-                  .firstOrNull
-                  ?.version ??
-              '');
-      if (wsVersion.isNotEmpty && cmpVer(version, wsVersion) <= 0) {
-        throw Exception('版本 $version 需大于工坊当前 $wsVersion');
-      }
+      var contentFolder = mod.path;
+      if (upContent) {
+        final wsVersion = targetId == null
+            ? ''
+            : (remoteItems
+                    .where((x) => x.id == targetId)
+                    .firstOrNull
+                    ?.version ??
+                '');
+        if (wsVersion.isNotEmpty && cmpVer(version, wsVersion) <= 0) {
+          throw Exception('版本 $version 需大于工坊当前 $wsVersion');
+        }
 
-      // 版本写回 modinfo.lua
-      if (version != mod.info.version) {
-        await mod.writeVersion(version);
-        log(LogLevel.info, 'modinfo.lua version → $version');
-      }
+        // 版本写回 modinfo.lua
+        if (version != mod.info.version) {
+          await mod.writeVersion(version);
+          log(LogLevel.info, 'modinfo.lua version → $version');
+        }
 
-      progress = const PublishProgress('暂存清洗副本', .1);
-      notifyListeners();
-      final plan = await planStage(mod);
-      if (plan.overLimit) {
-        // SteamPipe 工坊无固定体积硬上限(100MB 是老 Steam Cloud 通道的限制),
-        // 超大包只提示不拦截,真被拒会由 Steam 返回 EResult
-        log(LogLevel.warn,
-            '内容 ${(plan.totalSize / 1048576).toStringAsFixed(1)} MB 较大,上传耗时会变长;若被 Steam 拒绝请检查是否含无关大文件');
+        progress = const PublishProgress('暂存清洗副本', .1);
+        notifyListeners();
+        final plan = await planStage(mod);
+        if (plan.overLimit) {
+          // SteamPipe 工坊无固定体积硬上限(100MB 是老 Steam Cloud 通道的限制),
+          // 超大包只提示不拦截,真被拒会由 Steam 返回 EResult
+          log(LogLevel.warn,
+              '内容 ${(plan.totalSize / 1048576).toStringAsFixed(1)} MB 较大,上传耗时会变长;若被 Steam 拒绝请检查是否含无关大文件');
+        }
+        final staged = await materialize(mod, plan);
+        log(LogLevel.info,
+            '已暂存 ${plan.kept.length} 项(忽略 ${plan.dropped.length} 项)→ ${staged.path}');
+        contentFolder = staged.path;
+      } else {
+        log(LogLevel.info, '本次不更新内容文件,跳过版本校验与暂存');
       }
-      final staged = await materialize(mod, plan);
-      log(LogLevel.info,
-          '已暂存 ${plan.kept.length} 项(忽略 ${plan.dropped.length} 项)→ ${staged.path}');
 
       String? preview;
-      final pv = mod.preview;
-      if (pv != null) {
-        final len = await pv.length();
-        if (len >= 1024 * 1024) {
-          throw Exception(
-              '预览图 ${(len / 1024).round()} KB ≥ 1MB 上限,Steam 会拒收');
+      if (upPreview) {
+        final pv = mod.preview;
+        if (pv != null) {
+          final len = await pv.length();
+          if (len >= 1024 * 1024) {
+            throw Exception(
+                '预览图 ${(len / 1024).round()} KB ≥ 1MB 上限,Steam 会拒收');
+          }
+          preview = pv.path;
         }
-        preview = pv.path;
       }
 
       // 标签 = 类型标签(modinfo 派生)+ 发布页里的用户标签;
@@ -354,7 +369,7 @@ class AppState extends ChangeNotifier {
       final req = PublishRequest(
         appId: mod.pub.appId,
         publishedFileId: targetId,
-        contentFolder: staged.path,
+        contentFolder: contentFolder,
         previewFile: preview,
         title: primary.title,
         description: primary.desc,
@@ -363,6 +378,11 @@ class AppState extends ChangeNotifier {
         tags: tagSet.toList(),
         version: version,
         languages: languages,
+        updateContent: upContent,
+        updateText: upText,
+        updatePreview: upPreview,
+        updateTags: upTags,
+        updateVisibility: upVisibility,
       );
       final Stream<PublishEvent> events = engine == 'steamworks'
           ? SteamworksEngine(helperPath: helperPath).publish(req)

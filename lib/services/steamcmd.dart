@@ -46,6 +46,11 @@ class PublishRequest {
   final List<String> tags; // steamcmd 路径不支持;Steamworks 引擎走 SetItemTags
   final String version; // 写入 UGC metadata,供跨机器绑定时读回工坊版本
   final List<LangEntry> languages; // 多语言;第一条带内容上传
+  final bool updateContent;
+  final bool updateText;
+  final bool updatePreview;
+  final bool updateTags;
+  final bool updateVisibility;
 
   const PublishRequest({
     required this.appId,
@@ -59,6 +64,11 @@ class PublishRequest {
     this.tags = const [],
     this.version = '',
     this.languages = const [],
+    this.updateContent = true,
+    this.updateText = true,
+    this.updatePreview = true,
+    this.updateTags = true,
+    this.updateVisibility = true,
   });
 }
 
@@ -70,15 +80,22 @@ String buildVdf(PublishRequest r) {
     ..writeln('"workshopitem"')
     ..writeln('{')
     ..writeln('  "appid" "${r.appId}"')
-    ..writeln('  "publishedfileid" "${r.publishedFileId ?? ''}"')
-    ..writeln('  "contentfolder" "${_vdfEscape(r.contentFolder)}"');
-  if (r.previewFile != null) {
+    ..writeln('  "publishedfileid" "${r.publishedFileId ?? ''}"');
+  if (r.updateContent) {
+    b.writeln('  "contentfolder" "${_vdfEscape(r.contentFolder)}"');
+  }
+  if (r.updatePreview && r.previewFile != null) {
     b.writeln('  "previewfile" "${_vdfEscape(r.previewFile!)}"');
   }
+  if (r.updateVisibility) {
+    b.writeln('  "visibility" "${r.visibility}"');
+  }
+  if (r.updateText) {
+    b
+      ..writeln('  "title" "${_vdfEscape(r.title)}"')
+      ..writeln('  "description" "${_vdfEscape(r.description)}"');
+  }
   b
-    ..writeln('  "visibility" "${r.visibility}"')
-    ..writeln('  "title" "${_vdfEscape(r.title)}"')
-    ..writeln('  "description" "${_vdfEscape(r.description)}"')
     ..writeln('  "changenote" "${_vdfEscape(r.changeNote)}"')
     ..writeln('}');
   return b.toString();
