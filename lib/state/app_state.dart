@@ -465,6 +465,7 @@ class AppState extends ChangeNotifier {
         version: version,
         previewUrl: old.previewUrl,
         description: old.description,
+        visibility: visibility,
       );
     } else {
       remoteItems = [
@@ -473,7 +474,8 @@ class AppState extends ChangeNotifier {
             title: mod.info.name,
             subs: 0,
             updated: DateTime.now(),
-            version: version),
+            version: version,
+            visibility: visibility),
         ...remoteItems,
       ];
     }
@@ -578,6 +580,7 @@ class AppState extends ChangeNotifier {
                 version: ver,
                 previewUrl: j['preview'] as String? ?? '',
                 description: j['desc'] as String? ?? '',
+                visibility: (j['visibility'] as num?)?.toInt() ?? -1,
               ));
             } else if (j['event'] == 'result') {
               ok = j['ok'] == true;

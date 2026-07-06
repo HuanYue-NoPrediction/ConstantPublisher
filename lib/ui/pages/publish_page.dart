@@ -116,7 +116,9 @@ class _PublishPageState extends State<PublishPage> {
     _tags = target != null
         ? target.tags.where((t) => !t.startsWith('version:')).toList()
         : List.of(mod.pub.tags);
-    _visibility = mod.pub.visibility;
+    _visibility = target != null && target.visibility >= 0
+        ? target.visibility
+        : mod.pub.visibility;
     _plan = null;
 
     // 多语言默认:主语言(简体中文)标题=modinfo 名,简介=工坊现有/本地

@@ -26,6 +26,9 @@ class WorkshopItemRemote {
   /// 工坊现有简介(BBCode 全文),更新时作为编辑基线。
   final String description;
 
+  /// 工坊当前可见性(0 公开 / 1 好友 / 2 私密 / 3 不公开;-1 未知)。
+  final int visibility;
+
   const WorkshopItemRemote({
     required this.id,
     required this.title,
@@ -41,6 +44,7 @@ class WorkshopItemRemote {
     this.version = '',
     this.previewUrl = '',
     this.description = '',
+    this.visibility = -1,
   });
 
   /// 好评率:有投票才算,否则用 Steam 的综合评分。
@@ -100,6 +104,7 @@ Future<List<WorkshopItemRemote>> fetchUserItems({
             const [],
         previewUrl: m['preview_url'] as String? ?? '',
         description: m['file_description'] as String? ?? '',
+        visibility: (m['visibility'] as num?)?.toInt() ?? -1,
       );
     }).toList();
   } finally {
