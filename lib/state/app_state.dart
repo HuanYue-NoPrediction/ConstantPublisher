@@ -339,6 +339,9 @@ class AppState extends ChangeNotifier {
         final staged = await materialize(mod, plan);
         log(LogLevel.info,
             '已暂存 ${plan.kept.length} 项(忽略 ${plan.dropped.length} 项)→ ${staged.path}');
+        if (mod.pub.appId == 322330) {
+          log(LogLevel.info, '已生成 mod.manifest(游戏资源索引,与官方上传器一致)');
+        }
         contentFolder = staged.path;
       } else {
         log(LogLevel.info, '本次不更新内容文件,跳过版本校验与暂存');

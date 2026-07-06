@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
 
@@ -104,5 +106,35 @@ Future<Directory> materialize(Mod mod, StagePlan plan) async {
     await dst.parent.create(recursive: true);
     await src.copy(dst.path);
   }
+  if (mod.pub.appId == 322330) {
+    await _writeModManifest(staging, plan.kept.map((e) => e.rel));
+  }
   return staging;
+}
+
+int _sdbm(String s) {
+  var h = 0;
+  for (final b in utf8.encode(s)) {
+    h = (h * 65599 + b) & 0xFFFFFFFF;
+  }
+  return h;
+}
+
+Uint8List _u32le(int v) =>
+    Uint8List(4)..buffer.asByteData().setUint32(0, v, Endian.little);
+
+Future<void> _writeModManifest(
+    Directory staging, Iterable<String> rels) async {
+  final hashes = [
+    for (final r in rels)
+      if (r.toLowerCase() != 'mod.manifest') _sdbm(r.toLowerCase()),
+  ];
+  final b = BytesBuilder()
+    ..add(ascii.encode('MNFS'))
+    ..add(_u32le(1))
+    ..add(_u32le(hashes.length));
+  for (final h in hashes) {
+    b.add(_u32le(h));
+  }
+  await File(p.join(staging.path, 'mod.manifest')).writeAsBytes(b.toBytes());
 }
