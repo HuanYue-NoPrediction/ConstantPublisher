@@ -85,6 +85,12 @@ class AppState extends ChangeNotifier {
   UpdateInfo? update;
   Timer? _updateTimer;
 
+  @override
+  void dispose() {
+    _updateTimer?.cancel();
+    super.dispose();
+  }
+
   Future<void> checkUpdates({bool manual = false}) async {
     final u = await checkWorkshopUpdate(modsDir) ?? await checkGithubUpdate();
     update = u;
