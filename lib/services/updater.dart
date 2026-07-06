@@ -111,6 +111,8 @@ Future<String?> applyUpdate(String zipPath) async {
   final installDir = File(Platform.resolvedExecutable).parent.path;
   final bat = File(p.join(
       Directory.systemTemp.path, 'dst_mod_publisher_update', 'apply.bat'));
+  final vbs = File(p.join(
+      Directory.systemTemp.path, 'dst_mod_publisher_update', 'apply.vbs'));
   await bat.writeAsString('''
 @echo off
 :wait
@@ -122,9 +124,12 @@ if not errorlevel 1 (
 robocopy "${staging.path}" "$installDir" /E /NFL /NDL /NJH /NJS /NP >nul
 start "" "${p.join(installDir, 'dst_mod_publisher.exe')}"
 rmdir /S /Q "${staging.path}"
+del "${vbs.path}"
 del "%~f0"
 ''');
-  await Process.start('cmd', ['/c', 'start', '', '/min', bat.path],
+  await vbs.writeAsString(
+      'CreateObject("WScript.Shell").Run """${bat.path}""", 0, False\r\n');
+  await Process.start('wscript', [vbs.path],
       mode: ProcessStartMode.detached);
   exit(0);
 }
