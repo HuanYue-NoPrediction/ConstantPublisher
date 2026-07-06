@@ -6,51 +6,57 @@
 [hr][/hr]
 
 [h2]Why this exists[/h2]
-Every mod author knows the pain of the official uploader:
+If you've used the official uploader, you know the pain:
 [list]
-[*]An upload fails and [b]wipes everything you just typed[/b]
-[*]It ships the whole folder — .git, PSD sources and backup archives all end up on the Workshop
-[*]The description is a single raw text box; you write BBCode blind
-[*]No changelog, so subscribers never know what you changed
-[*]You must edit the version in modinfo.lua by hand — forget it and the update silently fails
-[*]Errors are just a number: good luck guessing what EResult 25 means
+[*]One failed upload and your carefully written description is [b]wiped clean[/b]
+[*]Want to fix a typo in the description? Re-upload the whole mod
+[*]The description box is a bare textarea — BBCode written blind, one language only
+[*]It uploads your entire folder: .git, PSD sources, backup archives, everything
+[*]No change notes — subscribers never know what you changed
+[*]Version number is edited by hand in modinfo.lua; forget it and the update fails silently
+[*]Errors are just a number. What's EResult 25? Go figure
 [/list]
 
-[h2]How this tool fixes it[/h2]
+[h2]What this tool does about it[/h2]
 [list]
-[*][b]Zero setup[/b] — keep Steam running and own the game; unzip and double-click. No account, no password, no dependencies (same Steamworks mechanism as the official tool)
-[*][b]Auto-saved drafts[/b] — everything you edit is saved as you type; a failed upload keeps it all, just fix and retry
-[*][b]BBCode editor[/b] — toolbar with live preview; when updating an existing mod it pulls the current Workshop description as your starting point
-[*][b]Changelog[/b] — write a change note on every update, straight into Steam's official "Change Notes"
-[*][b]Clean uploads[/b] — ignores .git / exported / source files / archives / exe by default, shows the exact file list before upload, and supports a custom .modignore
-[*][b]Version automation[/b] — one-click bump written back into modinfo.lua, auto-maintained version: tag, and a hard check that the new version is greater than what's live
-[*][b]Manage your items[/b] — thumbnails, subscriptions, favorites, comment counts and rating at a glance; multi-select tag filtering; one click to the comments page
-[*][b]Target and content are separate[/b] — pick the publish target (an existing item or a new one) and the content folder independently; updating an old item from a new folder or a new machine is effortless
+[*][b]Zero setup[/b] — Steam running + an account that owns Don't Starve. Unzip, double-click, done. No login, no password, no dependencies (same Steamworks mechanism as the official tool)
+[*][b]Draft autosave[/b] — everything you type is saved as you go; a failed upload keeps your work intact, fix and retry
+[*][b]Multi-language descriptions[/b] — edit title and description per language (EN / Simplified & Traditional Chinese / JP / KR / RU), just like the Steam backend; existing workshop text is pulled in as your baseline
+[*][b]BBCode editor[/b] — every Steam tag (headers, lists, tables, quotes, code, spoilers, video) with live preview
+[*][b]Selective updates[/b] — tick what to update this time: content files / title & description / preview image / tags / visibility. A description-only fix takes seconds, no file re-upload
+[*][b]Change notes[/b] — write a changenote per update; it lands in Steam's official Change Notes tab
+[*][b]Clean uploads[/b] — ignores .git / exported / source files / archives / exe by default; the file list is visible before upload, [b]click any file to toggle upload/ignore[/b], your choice is remembered; .modignore rules supported too
+[*][b]Version automation[/b] — one-click bump written back to modinfo.lua, the workshop version: tag maintained automatically, and updates are blocked unless the version is higher than what's live
+[*][b]mod.manifest[/b] — generated automatically on publish (the game's asset index, same as the official uploader), so mod assets load faster
+[*][b]Workshop overview[/b] — covers, subscriptions, favorites, comment counts and rating for all your items on one screen, multi-select tag filtering, one click to the comments page
+[*][b]Target and content decoupled[/b] — pick the workshop item (or "new item") and the content folder independently; visibility, tags and descriptions all default to what's currently live, so updating an old item from a new machine or folder just works
+[*][b]The tool updates itself[/b] — it tells you when a new version is out and upgrades with one click; if you're subscribed to this page, Steam even delivers the package so there's nothing to download
 [*][b]Errors in plain language[/b] — EResult codes are translated with suggested fixes
-[*][b]Modern UI[/b] — Material You design, dark mode, 14 accent colors
-[*][b]Multi-language pages[/b] — edit the title and description per language, each submitted separately so Steam shows subscribers their own language
+[*][b]Modern UI[/b] — Material You design, dark mode, 14 theme colors
 [/list]
 
 [h2]Three steps to start[/h2]
 [olist]
 [*]Download and unzip the release; make sure the Steam client is logged in
-[*]Run dst_mod_publisher.exe and pick your mods folder under Settings
-[*]Hit "Update" on the Workshop page (or pick a folder on the Publish page) → fill in the version and notes → publish
+[*]Double-click dst_mod_publisher.exe and pick your mods directory in Settings
+[*]Hit "Update" on the Workshop page, or pick a folder on the Publish page → fill in version and notes → publish
 [/olist]
 
 [h2]How to get it[/h2]
 [olist]
 [*][b]Subscribe to this page[/b] and let Steam finish downloading
-[*]Open [b]steamapps/workshop/content/322330/THIS_ITEM_ID/[/b] (the numeric ID is in your browser's address bar)
-[*]Unzip [b]DSTModPublisher-windows.zip[/b] inside and run dst_mod_publisher.exe — no dependencies, works as long as Steam is running
+[*]Open [b]steamapps/workshop/content/322330/THIS-ITEM-ID/[/b] (the numeric ID is in your browser's address bar)
+[*]Unzip [b]DSTModPublisher-windows.zip[/b] inside and double-click dst_mod_publisher.exe — zero dependencies, just have Steam running
 [/olist]
+You only do this once: when a new version ships, the tool will offer to update itself.
 
 [h2]Open source[/h2]
 [list]
-[*]GPL-3.0: [url=https://github.com/HuanYue-NoPrediction/ConstantPublisher]GitHub repo[/url] (source and Releases; this build is kept in sync with the Workshop)
-[*]Dual engine: Steamworks by default on desktop; a steamcmd engine is also included for CI / headless environments
+[*]GPL-3.0: [url=https://github.com/HuanYue-NoPrediction/ConstantPublisher]GitHub repository[/url] (source and Releases; the copy on this page is kept in sync)
+[*]Experimental macOS build available in GitHub Releases (unsigned, in testing)
+[*]Two engines: Steamworks by default on desktop, plus a steamcmd engine for CI / headless automation
 [/list]
 
 [hr][/hr]
 
-[i]This is a community tool, not affiliated with Klei Entertainment or Valve. Don't Starve is a trademark of Klei Entertainment; Steam is a trademark of Valve. Steam may show "Playing Don't Starve Together" while uploading — that's normal, as the tool attaches to the game's Steamworks session.[/i]
+[i]This is a community tool, not affiliated with Klei Entertainment or Valve. Don't Starve is a trademark of Klei Entertainment; Steam is a trademark of Valve. While uploading, Steam may show you as "playing Don't Starve Together" — that's normal for Steamworks integrations.[/i]
