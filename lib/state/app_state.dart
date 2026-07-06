@@ -77,9 +77,13 @@ class AppState extends ChangeNotifier {
       unawaited(refreshRemote());
     }
     unawaited(checkUpdates());
+    _updateTimer = Timer.periodic(const Duration(minutes: 20), (_) {
+      if (update == null && !busy) unawaited(checkUpdates());
+    });
   }
 
   UpdateInfo? update;
+  Timer? _updateTimer;
 
   Future<void> checkUpdates({bool manual = false}) async {
     final u = await checkWorkshopUpdate(modsDir) ?? await checkGithubUpdate();
