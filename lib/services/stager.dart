@@ -70,7 +70,7 @@ Future<List<String>> loadModIgnore(Mod mod) async {
 
 /// 扫描模组目录,给出"将上传/将忽略"清单(dry-run 直接展示这个)。
 Future<StagePlan> planStage(Mod mod) async {
-  final custom = [...await loadModIgnore(mod), ...mod.pub.ignore];
+  final fromFile = await loadModIgnore(mod);
   final entries = <StagedEntry>[];
 
   await for (final ent in mod.dir.list(recursive: true, followLinks: false)) {
@@ -81,9 +81,11 @@ Future<StagePlan> planStage(Mod mod) async {
     String? reason;
     if (mod.pub.keep.any((pat) => _match(rel, pat))) {
       reason = null; // keep 白名单:强制保留,压过一切忽略规则
+    } else if (mod.pub.ignore.any((pat) => _match(rel, pat))) {
+      reason = '自定义';
     } else if (hiddenDir || kDefaultIgnore.any((pat) => _match(rel, pat))) {
       reason = '默认忽略';
-    } else if (custom.any((pat) => _match(rel, pat))) {
+    } else if (fromFile.any((pat) => _match(rel, pat))) {
       reason = '.modignore';
     }
     final size = await ent.length();

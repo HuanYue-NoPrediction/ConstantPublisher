@@ -192,6 +192,20 @@ class _PublishPageState extends State<PublishPage> {
     if (mounted && _contentPath == mod.path) setState(() => _plan = plan);
   }
 
+  Future<void> _toggleEntry(Mod mod, StagedEntry e) async {
+    if (mod.pub.ignore.contains(e.rel)) {
+      mod.pub.ignore.remove(e.rel);
+    } else if (mod.pub.keep.contains(e.rel)) {
+      mod.pub.keep.remove(e.rel);
+    } else if (e.skipped) {
+      mod.pub.keep.add(e.rel);
+    } else {
+      mod.pub.ignore.add(e.rel);
+    }
+    await mod.savePub();
+    await _refreshPlan(mod);
+  }
+
   String _fmtTime(DateTime t) =>
       '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}:${t.second.toString().padLeft(2, '0')}';
 
@@ -862,7 +876,7 @@ class _PublishPageState extends State<PublishPage> {
         const SizedBox(height: 14),
         SectionCard(
           title: '将要上传',
-          subtitle: '已应用忽略规则',
+          subtitle: '点击文件可切换上传/忽略,选择存入 dstpub.json',
           trailing: IconButton(
             tooltip: '重新扫描',
             icon: const Icon(Icons.refresh, size: 18),
@@ -889,38 +903,52 @@ class _PublishPageState extends State<PublishPage> {
                               horizontal: 12, vertical: 6),
                           children: [
                             for (final e in plan.entries)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: 2.5),
-                                child: Row(children: [
-                                  Expanded(
-                                    child: Text(
-                                      e.rel,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontFamily: 'monospace',
-                                        decoration: e.skipped
-                                            ? TextDecoration.lineThrough
-                                            : null,
-                                        color: e.skipped
-                                            ? scheme.onSurfaceVariant
-                                            : scheme.onSurface,
+                              InkWell(
+                                borderRadius: BorderRadius.circular(6),
+                                onTap: () => _toggleEntry(mod, e),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 2.5),
+                                  child: Row(children: [
+                                    Icon(
+                                      e.skipped
+                                          ? Icons.remove_circle_outline
+                                          : Icons.check_circle_outline,
+                                      size: 14,
+                                      color: e.skipped
+                                          ? scheme.error
+                                          : sem.success,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        e.rel,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontFamily: 'monospace',
+                                          decoration: e.skipped
+                                              ? TextDecoration.lineThrough
+                                              : null,
+                                          color: e.skipped
+                                              ? scheme.onSurfaceVariant
+                                              : scheme.onSurface,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  Text(
-                                    e.skipped
-                                        ? (e.reason ?? '')
-                                        : humanSize(e.size),
-                                    style: TextStyle(
-                                        fontSize: 10.5,
-                                        fontFamily: 'monospace',
-                                        color: e.skipped
-                                            ? scheme.error
-                                            : scheme.onSurfaceVariant),
-                                  ),
-                                ]),
+                                    Text(
+                                      e.skipped
+                                          ? (e.reason ?? '')
+                                          : humanSize(e.size),
+                                      style: TextStyle(
+                                          fontSize: 10.5,
+                                          fontFamily: 'monospace',
+                                          color: e.skipped
+                                              ? scheme.error
+                                              : scheme.onSurfaceVariant),
+                                    ),
+                                  ]),
+                                ),
                               ),
                           ],
                         ),
