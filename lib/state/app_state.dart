@@ -346,6 +346,7 @@ class AppState extends ChangeNotifier {
       mod.pub.tags = List.of(tags); // 类型/版本标签每次发布自动生成,不落盘
       await mod.savePub();
       publishTargetId = resultId; // 会话内:新建后再次发布即更新该条目
+      if (resultId != null) _itemLangsCache.remove(resultId); // 简介已变,缓存失效
       log(LogLevel.info,
           '✔ 已发布 ${mod.info.name} v$version(条目 ${resultId ?? '?'})· 更新记录已写入');
       // 本地先行更新列表(即时反映),不马上起 list 助手 ——
@@ -403,8 +404,14 @@ class AppState extends ChangeNotifier {
 
   bool _refreshing = false; // 单飞:同一时刻只允许一个 list 助手,避免多进程抢 Steam 会话
 
+  /// 各条目多语言底稿的会话缓存:同一条目只对 Steam 查一次,
+  /// 发布成功后失效(内容可能已变)。
+  final Map<String, List<LangEntry>> _itemLangsCache = {};
+
   /// 取某条目各语言的标题/简介(多语言底稿)。仅 Steamworks 引擎可用。
   Future<List<LangEntry>> fetchItemLangs(String id) async {
+    final cached = _itemLangsCache[id];
+    if (cached != null) return cached;
     if (engine != 'steamworks' || !File(helperPath).existsSync()) return [];
     final out = <LangEntry>[];
     try {
@@ -425,6 +432,7 @@ class AppState extends ChangeNotifier {
       await proc.exitCode;
       killer.cancel();
     } catch (_) {}
+    if (out.isNotEmpty) _itemLangsCache[id] = out;
     return out;
   }
 

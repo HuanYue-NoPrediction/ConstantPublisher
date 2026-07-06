@@ -58,6 +58,11 @@ class _PublishPageState extends State<PublishPage> {
 
   @override
   void dispose() {
+    // 有待落盘的草稿就先冲刷保存(同步读控件,异步写盘),否则切页会丢最后 500ms 的编辑
+    if (_debounce?.isActive ?? false) {
+      _debounce!.cancel();
+      _saveDraft();
+    }
     _debounce?.cancel();
     _verCtrl.dispose();
     _titleCtrl.dispose();
@@ -176,6 +181,8 @@ class _PublishPageState extends State<PublishPage> {
       if ((_titleCtrl.text).isEmpty) _titleCtrl.text = _titles[_curLang] ?? '';
       if ((_descCtrl.text).isEmpty) _descCtrl.text = _descs[_curLang] ?? '';
       setState(() {});
+      // 把拉到的各语言底稿并入草稿:下次进页直接秒出,与主语言一致
+      _saveDraftSoon();
     }
   }
 
