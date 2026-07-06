@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../state/app_state.dart';
 import '../../theme.dart';
+import '../../version.dart';
 import '../widgets/bits.dart';
 
 class SettingsPage extends StatelessWidget {
@@ -187,10 +188,23 @@ class SettingsPage extends StatelessWidget {
         const SizedBox(height: 14),
         SectionCard(
           title: '关于',
+          trailing: TextButton(
+            onPressed: () async {
+              await state.checkUpdates(manual: true);
+              if (context.mounted) {
+                toast(
+                    context,
+                    state.update == null
+                        ? '已是最新版本 v$kAppVersion'
+                        : '发现新版本 v${state.update!.version},到仪表盘更新');
+              }
+            },
+            child: const Text('检查更新'),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('DST Mod Publisher 0.1.0',
+              const Text('DST Mod Publisher v$kAppVersion',
                   style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 4),
               Text(

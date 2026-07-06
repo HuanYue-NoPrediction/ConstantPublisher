@@ -9,6 +9,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/mod.dart';
 import '../services/stager.dart';
 import '../services/steamcmd.dart';
+import '../services/updater.dart';
+import '../version.dart';
 import '../services/steamworks_engine.dart';
 import '../services/workshop_api.dart';
 
@@ -73,6 +75,49 @@ class AppState extends ChangeNotifier {
     if (engine == 'steamworks' && steamReady) {
       // 后台预拉名下条目:发布页封面对比、工坊页、绑定下拉都依赖它
       unawaited(refreshRemote());
+    }
+    unawaited(checkUpdates());
+  }
+
+  UpdateInfo? update;
+
+  Future<void> checkUpdates({bool manual = false}) async {
+    final u = await checkWorkshopUpdate(modsDir) ?? await checkGithubUpdate();
+    update = u;
+    if (u != null) {
+      log(LogLevel.info, '发现新版本 v${u.version}(${u.source}),当前 v$kAppVersion');
+    } else if (manual) {
+      log(LogLevel.info, '已是最新版本 v$kAppVersion');
+    }
+    notifyListeners();
+  }
+
+  void dismissUpdate() {
+    update = null;
+    notifyListeners();
+  }
+
+  Future<void> startUpdate() async {
+    final u = update;
+    if (u == null || busy) return;
+    busy = true;
+    notifyListeners();
+    try {
+      var zip = u.zipPath;
+      if (zip == null && u.downloadUrl != null) {
+        log(LogLevel.info, '正在从 ${u.source} 下载 v${u.version}…');
+        zip = await downloadZip(u.downloadUrl!);
+      }
+      if (zip == null) {
+        log(LogLevel.error, '更新包获取失败,稍后重试');
+        return;
+      }
+      log(LogLevel.info, '应用更新中,即将自动重启…');
+      final err = await applyUpdate(zip);
+      if (err != null) log(LogLevel.error, '更新失败:$err');
+    } finally {
+      busy = false;
+      notifyListeners();
     }
   }
 
