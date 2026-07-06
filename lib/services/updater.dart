@@ -42,12 +42,41 @@ Future<UpdateInfo?> checkWorkshopUpdate(String modsDir) async {
   return null;
 }
 
+const _kRepo = 'HuanYue-NoPrediction/ConstantPublisher';
+
 Future<UpdateInfo?> checkGithubUpdate() async {
+  return await _checkGithubAsset() ?? await _checkGithubApi();
+}
+
+Future<UpdateInfo?> _checkGithubAsset() async {
   final client = HttpClient()
     ..connectionTimeout = const Duration(seconds: 8);
   try {
     final req = await client.getUrl(Uri.parse(
-        'https://api.github.com/repos/HuanYue-NoPrediction/ConstantPublisher/releases/latest'));
+        'https://github.com/$_kRepo/releases/latest/download/version.txt'));
+    req.headers.set('User-Agent', 'dst-mod-publisher');
+    final res = await req.close().timeout(const Duration(seconds: 10));
+    if (res.statusCode != 200) return null;
+    final v = (await res.transform(utf8.decoder).join()).trim();
+    if (v.isEmpty || cmpVer(v, kAppVersion) <= 0) return null;
+    return UpdateInfo(
+        version: v,
+        source: 'GitHub',
+        downloadUrl:
+            'https://github.com/$_kRepo/releases/latest/download/DSTModPublisher-windows.zip');
+  } catch (_) {
+    return null;
+  } finally {
+    client.close();
+  }
+}
+
+Future<UpdateInfo?> _checkGithubApi() async {
+  final client = HttpClient()
+    ..connectionTimeout = const Duration(seconds: 8);
+  try {
+    final req = await client.getUrl(Uri.parse(
+        'https://api.github.com/repos/$_kRepo/releases/latest'));
     req.headers.set('User-Agent', 'dst-mod-publisher');
     final res = await req.close().timeout(const Duration(seconds: 10));
     if (res.statusCode != 200) return null;
