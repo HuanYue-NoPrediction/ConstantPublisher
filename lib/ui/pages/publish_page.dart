@@ -391,7 +391,23 @@ class _PublishPageState extends State<PublishPage> {
                     DropdownMenuEntry(
                       value: m.path,
                       label:
-                          '${m.info.name.isEmpty ? m.folderName : m.info.name} · ${m.folderName}/ (v${m.info.version})',
+                          '${m.info.name.isEmpty ? m.folderName : m.info.name} · ${m.folderName}',
+                      labelWidget: Text.rich(TextSpan(children: [
+                        TextSpan(
+                            text: m.info.name.isEmpty
+                                ? m.folderName
+                                : m.info.name,
+                            style: const TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w600)),
+                        TextSpan(
+                            text:
+                                '   ${m.folderName}/ · v${m.info.version}',
+                            style: TextStyle(
+                                fontSize: 11.5,
+                                fontFamily: 'monospace',
+                                color: scheme.onSurfaceVariant)),
+                      ])),
                     ),
                 ],
                 onSelected: (v) {
