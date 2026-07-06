@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// 极简 BBCode 预览:支持 [h1] [b] [i] [u] [strike] [list][*] [url=] [img] [spoiler] [hr]。
-/// 只求"排版长什么样"一目了然,不追求与 Steam 渲染逐像素一致。
 class BBCodePreview extends StatelessWidget {
   final String source;
   const BBCodePreview(this.source, {super.key});
@@ -10,10 +8,16 @@ class BBCodePreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final blocks = <Widget>[];
-    // 先把块级标签拆出来:h1 / list / hr,其余按段落走内联解析。
     final text = source.replaceAll('\r\n', '\n');
     final pattern = RegExp(
-        r'\[h1\]([\s\S]*?)\[\/h1\]|\[list\]([\s\S]*?)\[\/list\]|\[hr\]',
+        r'\[(h[123])\]([\s\S]*?)\[\/\1\]'
+        r'|\[(list|olist)\]([\s\S]*?)\[\/\3\]'
+        r'|\[code\]([\s\S]*?)\[\/code\]'
+        r'|\[quote(?:=([^\]]*))?\]([\s\S]*?)\[\/quote\]'
+        r'|\[table[^\]]*\]([\s\S]*?)\[\/table\]'
+        r'|\[previewyoutube=([^\];]*)[^\]]*\][\s\S]*?\[\/previewyoutube\]'
+        r'|\[noparse\]([\s\S]*?)\[\/noparse\]'
+        r'|\[hr\](?:\[\/hr\])?',
         caseSensitive: false);
     var cursor = 0;
     for (final m in pattern.allMatches(text)) {
@@ -21,24 +25,77 @@ class BBCodePreview extends StatelessWidget {
         blocks.add(_para(context, text.substring(cursor, m.start)));
       }
       if (m.group(1) != null) {
+        final level = m.group(1)!.toLowerCase();
+        final size = level == 'h1' ? 17.0 : (level == 'h2' ? 15.5 : 14.0);
         blocks.add(Padding(
           padding: const EdgeInsets.only(top: 4, bottom: 6),
-          child: Text(m.group(1)!.trim(),
-              style:
-                  const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+          child: Text(m.group(2)!.trim(),
+              style: TextStyle(fontSize: size, fontWeight: FontWeight.w700)),
         ));
-      } else if (m.group(2) != null) {
-        for (final item in m.group(2)!.split('[*]')) {
+      } else if (m.group(3) != null) {
+        final ordered = m.group(3)!.toLowerCase() == 'olist';
+        var n = 0;
+        for (final item in m.group(4)!.split('[*]')) {
           final t = item.trim();
           if (t.isEmpty) continue;
+          n++;
           blocks.add(Padding(
             padding: const EdgeInsets.only(left: 6, bottom: 2),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('•  '),
+            child:
+                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              SizedBox(width: 24, child: Text(ordered ? '$n.' : '•')),
               Expanded(child: _inline(context, t)),
             ]),
           ));
         }
+      } else if (m.group(5) != null) {
+        blocks.add(Container(
+          width: double.infinity,
+          margin: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            border: Border.all(color: scheme.outlineVariant),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(m.group(5)!.trim(),
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 12.5)),
+        ));
+      } else if (m.group(7) != null) {
+        blocks.add(Container(
+          width: double.infinity,
+          margin: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            border: Border(left: BorderSide(color: scheme.primary, width: 3)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if ((m.group(6) ?? '').isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text('${m.group(6)} 发表:',
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: scheme.onSurfaceVariant)),
+                ),
+              _inline(context, m.group(7)!.trim()),
+            ],
+          ),
+        ));
+      } else if (m.group(8) != null) {
+        blocks.add(_table(context, m.group(8)!));
+      } else if (m.group(9) != null) {
+        blocks.add(_placeholder(context, '视频(发布后显示):${m.group(9)}'));
+      } else if (m.group(10) != null) {
+        blocks.add(Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Text(m.group(10)!,
+              style: const TextStyle(fontSize: 13.5, height: 1.55)),
+        ));
       } else {
         blocks.add(Divider(color: scheme.outlineVariant));
       }
@@ -52,6 +109,68 @@ class BBCodePreview extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start, children: blocks);
   }
 
+  Widget _table(BuildContext context, String body) {
+    final scheme = Theme.of(context).colorScheme;
+    final trRe = RegExp(r'\[tr\]([\s\S]*?)\[\/tr\]', caseSensitive: false);
+    final cellRe =
+        RegExp(r'\[(th|td)\]([\s\S]*?)\[\/\1\]', caseSensitive: false);
+    final parsed = <List<(String, String)>>[];
+    var cols = 0;
+    for (final tr in trRe.allMatches(body)) {
+      final cells = [
+        for (final c in cellRe.allMatches(tr.group(1)!))
+          (c.group(1)!.toLowerCase(), c.group(2)!.trim())
+      ];
+      if (cells.isEmpty) continue;
+      if (cells.length > cols) cols = cells.length;
+      parsed.add(cells);
+    }
+    if (parsed.isEmpty) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      child: Table(
+        border: TableBorder.all(color: scheme.outlineVariant),
+        defaultColumnWidth: const IntrinsicColumnWidth(),
+        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+        children: [
+          for (final cells in parsed)
+            TableRow(children: [
+              for (var i = 0; i < cols; i++)
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  child: i < cells.length
+                      ? Text(cells[i].$2,
+                          style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: cells[i].$1 == 'th'
+                                  ? FontWeight.w700
+                                  : FontWeight.w400))
+                      : const SizedBox.shrink(),
+                ),
+            ]),
+        ],
+      ),
+    );
+  }
+
+  Widget _placeholder(BuildContext context, String label) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        border: Border.all(color: scheme.outlineVariant),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(label,
+          style: TextStyle(
+              fontSize: 11.5,
+              fontFamily: 'monospace',
+              color: scheme.onSurfaceVariant)),
+    );
+  }
+
   Widget _para(BuildContext context, String raw) {
     final t = raw.trim();
     if (t.isEmpty) return const SizedBox(height: 6);
@@ -61,7 +180,6 @@ class BBCodePreview extends StatelessWidget {
     );
   }
 
-  /// 内联标签 → TextSpan。逐个匹配最先出现的标签,递归处理内部。
   Widget _inline(BuildContext context, String text) {
     return Text.rich(TextSpan(children: _spans(context, text)),
         style: const TextStyle(fontSize: 13.5, height: 1.55));
@@ -80,14 +198,12 @@ class BBCodePreview extends StatelessWidget {
           () => const TextStyle(decoration: TextDecoration.lineThrough)),
     ];
 
-    // 特殊标签
     final url =
         RegExp(r'\[url=([^\]]*)\]([\s\S]*?)\[\/url\]', caseSensitive: false);
     final img = RegExp(r'\[img\]([\s\S]*?)\[\/img\]', caseSensitive: false);
     final spoiler =
         RegExp(r'\[spoiler\]([\s\S]*?)\[\/spoiler\]', caseSensitive: false);
 
-    // 找最先出现的任意标签
     Match? first;
     TextStyle Function()? style;
     var kind = '';
@@ -127,19 +243,7 @@ class BBCodePreview extends StatelessWidget {
                 decoration: TextDecoration.underline)));
       case 'img':
         spans.add(WidgetSpan(
-          child: Container(
-            margin: const EdgeInsets.symmetric(vertical: 4),
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              border: Border.all(color: scheme.outlineVariant),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text('图片(发布后显示):${first.group(1)}',
-                style: TextStyle(
-                    fontSize: 11.5,
-                    fontFamily: 'monospace',
-                    color: scheme.onSurfaceVariant)),
-          ),
+          child: _placeholder(context, '图片(发布后显示):${first.group(1)}'),
         ));
       case 'spoiler':
         spans.add(TextSpan(
