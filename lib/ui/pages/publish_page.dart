@@ -392,22 +392,45 @@ class _PublishPageState extends State<PublishPage> {
                       value: m.path,
                       label:
                           '${m.info.name.isEmpty ? m.folderName : m.info.name} · ${m.folderName}',
-                      labelWidget: Text.rich(TextSpan(children: [
-                        TextSpan(
-                            text: m.info.name.isEmpty
-                                ? m.folderName
-                                : m.info.name,
-                            style: const TextStyle(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w600)),
-                        TextSpan(
-                            text:
-                                '   ${m.folderName}/ · v${m.info.version}',
+                      labelWidget: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              m.info.name.isEmpty
+                                  ? m.folderName
+                                  : m.info.name,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: scheme.secondaryContainer,
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            child: Text(
+                              m.folderName,
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  fontFamily: 'monospace',
+                                  color: scheme.onSecondaryContainer),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'v${m.info.version}',
                             style: TextStyle(
-                                fontSize: 11.5,
-                                fontFamily: 'monospace',
-                                color: scheme.onSurfaceVariant)),
-                      ])),
+                                fontSize: 11,
+                                color: scheme.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
                     ),
                 ],
                 onSelected: (v) {
