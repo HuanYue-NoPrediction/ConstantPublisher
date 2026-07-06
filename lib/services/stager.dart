@@ -17,6 +17,7 @@ const List<String> kDefaultIgnore = [
 
   'Thumbs.db', 'desktop.ini',
   'dstpub.json', '.modignore',
+  'mod.manifest',
 ];
 
 class StagedEntry {
