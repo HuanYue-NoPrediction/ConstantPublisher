@@ -56,6 +56,7 @@ class _PublishPageState extends State<PublishPage> {
   Timer? _debounce;
   String _draftStamp = '编辑内容会自动保存为草稿 —— 上传失败也不会丢';
   StagePlan? _plan;
+  final Set<String> _expandedDirs = {};
 
   @override
   void dispose() {
@@ -120,6 +121,7 @@ class _PublishPageState extends State<PublishPage> {
         ? target.visibility
         : mod.pub.visibility;
     _plan = null;
+    _expandedDirs.clear();
 
     // 多语言默认:主语言(简体中文)标题=modinfo 名,简介=工坊现有/本地
     _titles.clear();
@@ -206,6 +208,164 @@ class _PublishPageState extends State<PublishPage> {
     }
     await mod.savePub();
     await _refreshPlan(mod);
+  }
+
+  Future<void> _toggleFolder(Mod mod, String dir, bool anyKept) async {
+    if (mod.pub.ignore.contains(dir)) {
+      mod.pub.ignore.remove(dir);
+    } else if (mod.pub.keep.contains(dir)) {
+      mod.pub.keep.remove(dir);
+    } else if (anyKept) {
+      mod.pub.ignore.add(dir);
+    } else {
+      mod.pub.keep.add(dir);
+    }
+    await mod.savePub();
+    await _refreshPlan(mod);
+  }
+
+  List<Widget> _buildPlanRows(Mod mod, StagePlan plan) {
+    final scheme = Theme.of(context).colorScheme;
+    final rootFiles = <StagedEntry>[];
+    final dirs = <String, List<StagedEntry>>{};
+    for (final e in plan.entries) {
+      final i = e.rel.indexOf('/');
+      if (i < 0) {
+        rootFiles.add(e);
+      } else {
+        dirs.putIfAbsent(e.rel.substring(0, i), () => []).add(e);
+      }
+    }
+    final rows = <Widget>[];
+    for (final dir in dirs.keys.toList()..sort()) {
+      final files = dirs[dir]!;
+      final kept = files.where((e) => !e.skipped).length;
+      final keptSize =
+          files.where((e) => !e.skipped).fold<int>(0, (a, e) => a + e.size);
+      final expanded = _expandedDirs.contains(dir);
+      rows.add(InkWell(
+        borderRadius: BorderRadius.circular(6),
+        onTap: () => setState(() {
+          expanded ? _expandedDirs.remove(dir) : _expandedDirs.add(dir);
+        }),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(children: [
+            Icon(expanded ? Icons.expand_more : Icons.chevron_right,
+                size: 15, color: scheme.onSurfaceVariant),
+            const SizedBox(width: 3),
+            Icon(Icons.folder_outlined,
+                size: 14,
+                color:
+                    kept > 0 ? scheme.onSurfaceVariant : scheme.error),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                '$dir/',
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontFamily: 'monospace',
+                  fontWeight: FontWeight.w600,
+                  decoration:
+                      kept == 0 ? TextDecoration.lineThrough : null,
+                  color: kept == 0
+                      ? scheme.onSurfaceVariant
+                      : scheme.onSurface,
+                ),
+              ),
+            ),
+            Text(
+              kept == 0
+                  ? '全部忽略'
+                  : kept == files.length
+                      ? '${files.length} 个文件 · ${humanSize(keptSize)}'
+                      : '$kept/${files.length} 个上传 · ${humanSize(keptSize)}',
+              style: TextStyle(
+                  fontSize: 10.5,
+                  fontFamily: 'monospace',
+                  color:
+                      kept == 0 ? scheme.error : scheme.onSurfaceVariant),
+            ),
+            const SizedBox(width: 4),
+            Tooltip(
+              message: kept > 0 ? '忽略整个文件夹' : '恢复整个文件夹',
+              child: InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: () => _toggleFolder(mod, dir, kept > 0),
+                child: Padding(
+                  padding: const EdgeInsets.all(2),
+                  child: Icon(
+                    kept > 0
+                        ? Icons.remove_circle_outline
+                        : Icons.add_circle_outline,
+                    size: 14,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ),
+          ]),
+        ),
+      ));
+      if (expanded) {
+        for (final e in files) {
+          rows.add(Padding(
+            padding: const EdgeInsets.only(left: 20),
+            child: _fileRow(mod, e),
+          ));
+        }
+      }
+    }
+    for (final e in rootFiles) {
+      rows.add(_fileRow(mod, e));
+    }
+    return rows;
+  }
+
+  Widget _fileRow(Mod mod, StagedEntry e) {
+    final scheme = Theme.of(context).colorScheme;
+    final sem = SemanticColors.of(context);
+    return InkWell(
+      borderRadius: BorderRadius.circular(6),
+      onTap: () => _toggleEntry(mod, e),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2.5),
+        child: Row(children: [
+          Icon(
+            e.skipped
+                ? Icons.remove_circle_outline
+                : Icons.check_circle_outline,
+            size: 14,
+            color: e.skipped ? scheme.error : sem.success,
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              e.rel,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                fontFamily: 'monospace',
+                decoration:
+                    e.skipped ? TextDecoration.lineThrough : null,
+                color: e.skipped
+                    ? scheme.onSurfaceVariant
+                    : scheme.onSurface,
+              ),
+            ),
+          ),
+          Text(
+            e.skipped ? (e.reason ?? '') : humanSize(e.size),
+            style: TextStyle(
+                fontSize: 10.5,
+                fontFamily: 'monospace',
+                color:
+                    e.skipped ? scheme.error : scheme.onSurfaceVariant),
+          ),
+        ]),
+      ),
+    );
   }
 
   String _fmtTime(DateTime t) =>
@@ -943,54 +1103,7 @@ class _PublishPageState extends State<PublishPage> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 6),
                           children: [
-                            for (final e in plan.entries)
-                              InkWell(
-                                borderRadius: BorderRadius.circular(6),
-                                onTap: () => _toggleEntry(mod, e),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 2.5),
-                                  child: Row(children: [
-                                    Icon(
-                                      e.skipped
-                                          ? Icons.remove_circle_outline
-                                          : Icons.check_circle_outline,
-                                      size: 14,
-                                      color: e.skipped
-                                          ? scheme.error
-                                          : sem.success,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Expanded(
-                                      child: Text(
-                                        e.rel,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontFamily: 'monospace',
-                                          decoration: e.skipped
-                                              ? TextDecoration.lineThrough
-                                              : null,
-                                          color: e.skipped
-                                              ? scheme.onSurfaceVariant
-                                              : scheme.onSurface,
-                                        ),
-                                      ),
-                                    ),
-                                    Text(
-                                      e.skipped
-                                          ? (e.reason ?? '')
-                                          : humanSize(e.size),
-                                      style: TextStyle(
-                                          fontSize: 10.5,
-                                          fontFamily: 'monospace',
-                                          color: e.skipped
-                                              ? scheme.error
-                                              : scheme.onSurfaceVariant),
-                                    ),
-                                  ]),
-                                ),
-                              ),
+                            ..._buildPlanRows(mod, plan),
                           ],
                         ),
                       ),

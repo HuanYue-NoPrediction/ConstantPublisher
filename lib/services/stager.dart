@@ -11,7 +11,7 @@ const List<String> kDefaultIgnore = [
   '.git', '.svn', '.vscode', '.idea',
   'exported',
   '*.psd', '*.aseprite', '*.xcf',
-  '*.zip', '*.rar', '*.7z',
+  '*.rar', '*.7z',
   '*.bak', '*.tmp',
   '*.exe', '*.dll', '*.pdb', // 工坊会拒收可执行文件
 
