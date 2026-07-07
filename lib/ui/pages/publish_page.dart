@@ -43,7 +43,13 @@ class _PublishPageState extends State<PublishPage> {
   int _visibility = 0;
   List<String> _tags = [];
   bool _descPreview = false;
-  final Set<String> _parts = {'content', 'text', 'preview', 'tags', 'visibility'};
+  final Set<String> _parts = {
+    'content',
+    'text',
+    'preview',
+    'tags',
+    'visibility'
+  };
 
   // 多语言:每种语言各自的标题/简介;当前编辑的语言由 _curLang 指定
   String _curLang = 'schinese';
@@ -256,8 +262,7 @@ class _PublishPageState extends State<PublishPage> {
             const SizedBox(width: 3),
             Icon(Icons.folder_outlined,
                 size: 14,
-                color:
-                    kept > 0 ? scheme.onSurfaceVariant : scheme.error),
+                color: kept > 0 ? scheme.onSurfaceVariant : scheme.error),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
@@ -267,11 +272,8 @@ class _PublishPageState extends State<PublishPage> {
                   fontSize: 12,
                   fontFamily: 'monospace',
                   fontWeight: FontWeight.w600,
-                  decoration:
-                      kept == 0 ? TextDecoration.lineThrough : null,
-                  color: kept == 0
-                      ? scheme.onSurfaceVariant
-                      : scheme.onSurface,
+                  decoration: kept == 0 ? TextDecoration.lineThrough : null,
+                  color: kept == 0 ? scheme.onSurfaceVariant : scheme.onSurface,
                 ),
               ),
             ),
@@ -284,8 +286,7 @@ class _PublishPageState extends State<PublishPage> {
               style: TextStyle(
                   fontSize: 10.5,
                   fontFamily: 'monospace',
-                  color:
-                      kept == 0 ? scheme.error : scheme.onSurfaceVariant),
+                  color: kept == 0 ? scheme.error : scheme.onSurfaceVariant),
             ),
             const SizedBox(width: 4),
             Tooltip(
@@ -347,11 +348,8 @@ class _PublishPageState extends State<PublishPage> {
               style: TextStyle(
                 fontSize: 12,
                 fontFamily: 'monospace',
-                decoration:
-                    e.skipped ? TextDecoration.lineThrough : null,
-                color: e.skipped
-                    ? scheme.onSurfaceVariant
-                    : scheme.onSurface,
+                decoration: e.skipped ? TextDecoration.lineThrough : null,
+                color: e.skipped ? scheme.onSurfaceVariant : scheme.onSurface,
               ),
             ),
           ),
@@ -360,8 +358,7 @@ class _PublishPageState extends State<PublishPage> {
             style: TextStyle(
                 fontSize: 10.5,
                 fontFamily: 'monospace',
-                color:
-                    e.skipped ? scheme.error : scheme.onSurfaceVariant),
+                color: e.skipped ? scheme.error : scheme.onSurfaceVariant),
           ),
         ]),
       ),
@@ -472,141 +469,168 @@ class _PublishPageState extends State<PublishPage> {
         Text('发布', style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 14),
         // 发布目标
-        SectionCard(
-          title: '发布目标',
-          subtitle: isNew
-              ? '将新建一个工坊条目;要更新老模组,在下面选中它'
-              : '将更新选中的工坊条目',
-          child: DropdownButtonFormField<String>(
-            initialValue: targetId ?? '__new__',
-            isExpanded: true,
-            itemHeight: null,
-            decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                contentPadding:
-                    EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
-            selectedItemBuilder: (context) => [
-              Row(children: [
-                Icon(Icons.add_circle_outline,
-                    size: 18, color: scheme.primary),
-                const SizedBox(width: 8),
-                const Text('新建工坊条目',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
-              ]),
-              for (final it in state.remoteItems)
-                Row(children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: it.previewUrl.isEmpty
-                        ? Icon(Icons.cloud_outlined,
-                            size: 18, color: scheme.onSurfaceVariant)
-                        : Image.network(it.previewUrl,
-                            width: 22,
-                            height: 22,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Icon(
-                                Icons.cloud_off_outlined,
-                                size: 18,
-                                color: scheme.onSurfaceVariant)),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+            child: Row(
+              children: [
+                Tooltip(
+                  message: isNew ? '将新建一个工坊条目;要更新老模组,在列表里选中它' : '将更新选中的工坊条目',
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('发布目标',
+                          style: TextStyle(
+                              fontSize: 13.5, fontWeight: FontWeight.w600)),
+                      const SizedBox(width: 4),
+                      Icon(Icons.info_outline,
+                          size: 14, color: scheme.onSurfaceVariant),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      '${it.title} · v${it.version.isEmpty ? '?' : it.version}',
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ]),
-            ],
-            items: [
-              DropdownMenuItem(
-                value: '__new__',
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Row(children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: scheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Icon(Icons.add,
-                          size: 20, color: scheme.onPrimaryContainer),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('新建工坊条目',
-                              style: TextStyle(
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w600)),
-                          Text('在创意工坊创建一个全新条目',
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  color: scheme.onSurfaceVariant)),
-                        ],
-                      ),
-                    ),
-                  ]),
                 ),
-              ),
-              for (final it in state.remoteItems)
-                DropdownMenuItem(
-                  value: it.id,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: it.previewUrl.isEmpty
-                            ? Container(
-                                width: 36,
-                                height: 36,
-                                color: scheme.surfaceContainerHighest,
-                                child: Icon(Icons.cloud_outlined,
-                                    size: 18,
-                                    color: scheme.onSurfaceVariant))
-                            : Image.network(it.previewUrl,
-                                width: 36,
-                                height: 36,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
-                                    width: 36,
-                                    height: 36,
-                                    color:
-                                        scheme.surfaceContainerHighest)),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(it.title,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w600)),
-                            Text(
-                              'v${it.version.isEmpty ? '?' : it.version} · ${_fmtCount(it.subs)} 订阅',
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  color: scheme.onSurfaceVariant),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    initialValue: targetId ?? '__new__',
+                    isExpanded: true,
+                    itemHeight: null,
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: scheme.surfaceContainerHighest,
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 8),
+                      isDense: true,
+                    ),
+                    selectedItemBuilder: (context) => [
+                      Row(children: [
+                        Icon(Icons.add_circle_outline,
+                            size: 18, color: scheme.primary),
+                        const SizedBox(width: 8),
+                        const Text('新建工坊条目',
+                            style: TextStyle(fontWeight: FontWeight.w600)),
+                      ]),
+                      for (final it in state.remoteItems)
+                        Row(children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: it.previewUrl.isEmpty
+                                ? Icon(Icons.cloud_outlined,
+                                    size: 18, color: scheme.onSurfaceVariant)
+                                : Image.network(it.previewUrl,
+                                    width: 22,
+                                    height: 22,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Icon(
+                                        Icons.cloud_off_outlined,
+                                        size: 18,
+                                        color: scheme.onSurfaceVariant)),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '${it.title} · v${it.version.isEmpty ? '?' : it.version}',
+                              overflow: TextOverflow.ellipsis,
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w600),
                             ),
-                          ],
+                          ),
+                        ]),
+                    ],
+                    items: [
+                      DropdownMenuItem(
+                        value: '__new__',
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: Row(children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: scheme.primaryContainer,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Icon(Icons.add,
+                                  size: 20, color: scheme.onPrimaryContainer),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('新建工坊条目',
+                                      style: TextStyle(
+                                          fontSize: 13.5,
+                                          fontWeight: FontWeight.w600)),
+                                  Text('在创意工坊创建一个全新条目',
+                                      style: TextStyle(
+                                          fontSize: 11,
+                                          color: scheme.onSurfaceVariant)),
+                                ],
+                              ),
+                            ),
+                          ]),
                         ),
                       ),
-                    ]),
+                      for (final it in state.remoteItems)
+                        DropdownMenuItem(
+                          value: it.id,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: Row(children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: it.previewUrl.isEmpty
+                                    ? Container(
+                                        width: 36,
+                                        height: 36,
+                                        color: scheme.surfaceContainerHighest,
+                                        child: Icon(Icons.cloud_outlined,
+                                            size: 18,
+                                            color: scheme.onSurfaceVariant))
+                                    : Image.network(it.previewUrl,
+                                        width: 36,
+                                        height: 36,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => Container(
+                                            width: 36,
+                                            height: 36,
+                                            color: scheme
+                                                .surfaceContainerHighest)),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(it.title,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                            fontSize: 13.5,
+                                            fontWeight: FontWeight.w600)),
+                                    Text(
+                                      'v${it.version.isEmpty ? '?' : it.version} · ${_fmtCount(it.subs)} 订阅',
+                                      style: TextStyle(
+                                          fontSize: 11,
+                                          color: scheme.onSurfaceVariant),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ]),
+                          ),
+                        ),
+                    ],
+                    onChanged: (v) =>
+                        state.setPublishTarget(v == '__new__' ? null : v),
                   ),
                 ),
-            ],
-            onChanged: (v) =>
-                state.setPublishTarget(v == '__new__' ? null : v),
+              ],
+            ),
           ),
         ),
         if (!isNew) ...[
@@ -623,8 +647,7 @@ class _PublishPageState extends State<PublishPage> {
                       children: [
                         const Text('本次更新',
                             style: TextStyle(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w600)),
+                                fontSize: 13.5, fontWeight: FontWeight.w600)),
                         const SizedBox(width: 4),
                         Icon(Icons.info_outline,
                             size: 14, color: scheme.onSurfaceVariant),
@@ -677,8 +700,8 @@ class _PublishPageState extends State<PublishPage> {
             child: Row(
               children: [
                 const Text('内容文件夹',
-                    style: TextStyle(
-                        fontSize: 13.5, fontWeight: FontWeight.w600)),
+                    style:
+                        TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
                 const SizedBox(width: 14),
                 Expanded(
                   child: InkWell(
@@ -717,8 +740,7 @@ class _PublishPageState extends State<PublishPage> {
                             mod.info.name,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                                fontSize: 12.5,
-                                color: scheme.onSurfaceVariant),
+                                fontSize: 12.5, color: scheme.onSurfaceVariant),
                           ),
                         ),
                         Icon(Icons.arrow_drop_down,
@@ -751,8 +773,7 @@ class _PublishPageState extends State<PublishPage> {
             Icon(Icons.save_outlined, size: 15, color: sem.success),
             const SizedBox(width: 6),
             Text(_draftStamp,
-                style:
-                    TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
+                style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
           ]),
         ),
 
@@ -874,8 +895,8 @@ class _PublishPageState extends State<PublishPage> {
                           fontSize: 12.5, color: scheme.onSurfaceVariant)),
                   const Spacer(),
                   SegmentedButton<bool>(
-                    style: const ButtonStyle(
-                        visualDensity: VisualDensity.compact),
+                    style:
+                        const ButtonStyle(visualDensity: VisualDensity.compact),
                     segments: const [
                       ButtonSegment(value: false, label: Text('编写')),
                       ButtonSegment(value: true, label: Text('预览')),
@@ -954,8 +975,7 @@ class _PublishPageState extends State<PublishPage> {
             maxLines: 4,
             style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
             decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: '这个版本改了什么…'),
+                border: OutlineInputBorder(), hintText: '这个版本改了什么…'),
           ),
         ),
         const SizedBox(height: 14),
@@ -1019,8 +1039,8 @@ class _PublishPageState extends State<PublishPage> {
   }
 
   Future<void> _pickPreview(Mod mod) async {
-    const group = XTypeGroup(
-        label: '图片', extensions: ['jpg', 'jpeg', 'png', 'gif']);
+    const group =
+        XTypeGroup(label: '图片', extensions: ['jpg', 'jpeg', 'png', 'gif']);
     final f = await openFile(acceptedTypeGroups: [group]);
     if (f == null) return;
     final ext = p.extension(f.path).toLowerCase();
@@ -1105,8 +1125,7 @@ class _PublishPageState extends State<PublishPage> {
                     const SizedBox(height: 4),
                     Text(label,
                         style: TextStyle(
-                            fontSize: 10.5,
-                            color: scheme.onSurfaceVariant)),
+                            fontSize: 10.5, color: scheme.onSurfaceVariant)),
                   ],
                 );
 
@@ -1114,8 +1133,7 @@ class _PublishPageState extends State<PublishPage> {
                   width: 64,
                   height: 64,
                   color: scheme.surfaceContainerHighest,
-                  child: Icon(icon,
-                      size: 20, color: scheme.onSurfaceVariant),
+                  child: Icon(icon, size: 20, color: scheme.onSurfaceVariant),
                 );
 
             final slots = <Widget>[];
@@ -1139,8 +1157,8 @@ class _PublishPageState extends State<PublishPage> {
             }
 
             if (pv == null) {
-              slots.add(slot(placeholder(Icons.image_not_supported_outlined),
-                  '本地(缺失)'));
+              slots.add(slot(
+                  placeholder(Icons.image_not_supported_outlined), '本地(缺失)'));
               return Row(children: [
                 ...slots,
                 const SizedBox(width: 12),
@@ -1283,25 +1301,25 @@ class _PublishPageState extends State<PublishPage> {
                           tags: List.of(_tags),
                           parts: Set.of(_parts),
                         );
-                            if (ok) {
-                              await DraftStore.clear(mod.path, targetId);
-                              if (mounted) {
-                                setState(() =>
-                                    _draftStamp = '已发布 · 草稿已清除');
-                                toast(context,
-                                    '已发布 ${mod.info.name} v${_verCtrl.text}');
-                              }
-                            }
-                          },
+                        if (ok) {
+                          await DraftStore.clear(mod.path, targetId);
+                          if (mounted) {
+                            setState(() => _draftStamp = '已发布 · 草稿已清除');
+                            toast(context,
+                                '已发布 ${mod.info.name} v${_verCtrl.text}');
+                          }
+                        }
+                      },
                 icon: const Icon(Icons.upload),
                 label: Text(state.busy
                     ? '发布中…'
-                    : isNew ? '发布(新建条目)' : '更新到创意工坊'),
+                    : isNew
+                        ? '发布(新建条目)'
+                        : '更新到创意工坊'),
               ),
               const SizedBox(height: 8),
               FilledButton.tonal(
-                onPressed:
-                    state.busy ? null : () => state.dryRun(mod),
+                onPressed: state.busy ? null : () => state.dryRun(mod),
                 child: const Text('Dry-run:只演练,不上传'),
               ),
               if (state.busy && state.progress != null) ...[
