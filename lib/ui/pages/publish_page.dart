@@ -921,34 +921,63 @@ class _PublishPageState extends State<PublishPage> {
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Wrap(
-                          spacing: 5,
-                          runSpacing: 5,
-                          children: [
-                            _bbBtn('B', '[b]', '[/b]'),
-                            _bbBtn('I', '[i]', '[/i]'),
-                            _bbBtn('U', '[u]', '[/u]'),
-                            _bbBtn('S', '[strike]', '[/strike]'),
-                            _bbBtn('H1', '[h1]', '[/h1]'),
-                            _bbBtn('H2', '[h2]', '[/h2]'),
-                            _bbBtn('H3', '[h3]', '[/h3]'),
-                            _bbBtn('列表', '[list]\n[*]', '\n[/list]'),
-                            _bbBtn('序号', '[olist]\n[*]', '\n[/olist]'),
-                            _bbBtn('链接', '[url=https://]', '[/url]'),
-                            _bbBtn('图片', '[img]', '[/img]'),
-                            _bbBtn('视频', '[previewyoutube=',
-                                ';full][/previewyoutube]'),
-                            _bbBtn('引用', '[quote=作者]', '[/quote]'),
-                            _bbBtn('代码', '[code]', '[/code]'),
-                            _bbBtn(
-                                '表格',
-                                '[table]\n[tr][th]表头[/th][th]表头[/th][/tr]\n'
-                                    '[tr][td]内容[/td][td]内容[/td][/tr]\n[/table]',
-                                ''),
-                            _bbBtn('剧透', '[spoiler]', '[/spoiler]'),
-                            _bbBtn('原文', '[noparse]', '[/noparse]'),
-                            _bbBtn('分隔线', '[hr][/hr]\n', ''),
-                          ],
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 4, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: scheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Wrap(
+                            spacing: 0,
+                            runSpacing: 2,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              _bbIcon(Icons.format_bold, '粗体', '[b]', '[/b]'),
+                              _bbIcon(Icons.format_italic, '斜体', '[i]', '[/i]'),
+                              _bbIcon(Icons.format_underlined, '下划线', '[u]',
+                                  '[/u]'),
+                              _bbIcon(Icons.strikethrough_s, '删除线', '[strike]',
+                                  '[/strike]'),
+                              _bbDiv(),
+                              _bbTxt('H1', '大标题', '[h1]', '[/h1]'),
+                              _bbTxt('H2', '中标题', '[h2]', '[/h2]'),
+                              _bbTxt('H3', '小标题', '[h3]', '[/h3]'),
+                              _bbDiv(),
+                              _bbIcon(Icons.format_list_bulleted, '列表',
+                                  '[list]\n[*]', '\n[/list]'),
+                              _bbIcon(Icons.format_list_numbered, '有序列表',
+                                  '[olist]\n[*]', '\n[/olist]'),
+                              _bbDiv(),
+                              _bbIcon(
+                                  Icons.link, '链接', '[url=https://]', '[/url]'),
+                              _bbIcon(Icons.image_outlined, '图片', '[img]',
+                                  '[/img]'),
+                              _bbIcon(
+                                  Icons.smart_display_outlined,
+                                  'YouTube 视频',
+                                  '[previewyoutube=',
+                                  ';full][/previewyoutube]'),
+                              _bbDiv(),
+                              _bbIcon(Icons.format_quote, '引用', '[quote=作者]',
+                                  '[/quote]'),
+                              _bbIcon(Icons.code, '代码块', '[code]', '[/code]'),
+                              _bbIcon(
+                                  Icons.table_chart_outlined,
+                                  '表格',
+                                  '[table]\n[tr][th]表头[/th][th]表头[/th][/tr]\n'
+                                      '[tr][td]内容[/td][td]内容[/td][/tr]\n[/table]',
+                                  ''),
+                              _bbDiv(),
+                              _bbIcon(Icons.visibility_off_outlined, '剧透(点击显示)',
+                                  '[spoiler]', '[/spoiler]'),
+                              _bbIcon(Icons.format_clear, '原文(不解析标签)',
+                                  '[noparse]', '[/noparse]'),
+                              _bbIcon(Icons.horizontal_rule, '分隔线',
+                                  '[hr][/hr]\n', ''),
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 8),
                         TextField(
@@ -1069,31 +1098,58 @@ class _PublishPageState extends State<PublishPage> {
     }
   }
 
-  Widget _bbBtn(String label, String open, String close) {
-    return OutlinedButton(
-      style: OutlinedButton.styleFrom(
-          minimumSize: const Size(36, 30),
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          visualDensity: VisualDensity.compact),
-      onPressed: () {
-        final sel = _descCtrl.selection;
-        final text = _descCtrl.text;
-        final start = sel.isValid ? sel.start : text.length;
-        final end = sel.isValid ? sel.end : text.length;
-        final inner = text.substring(start, end);
-        _descCtrl.value = TextEditingValue(
-          text: text.substring(0, start) +
-              open +
-              inner +
-              close +
-              text.substring(end),
-          selection: TextSelection(
-              baseOffset: start + open.length,
-              extentOffset: start + open.length + inner.length),
-        );
-        _saveDraftSoon();
-      },
-      child: Text(label, style: const TextStyle(fontSize: 12)),
+  void _wrapSel(String open, String close) {
+    final sel = _descCtrl.selection;
+    final text = _descCtrl.text;
+    final start = sel.isValid ? sel.start : text.length;
+    final end = sel.isValid ? sel.end : text.length;
+    final inner = text.substring(start, end);
+    _descCtrl.value = TextEditingValue(
+      text:
+          text.substring(0, start) + open + inner + close + text.substring(end),
+      selection: TextSelection(
+          baseOffset: start + open.length,
+          extentOffset: start + open.length + inner.length),
+    );
+    _saveDraftSoon();
+  }
+
+  Widget _bbIcon(IconData icon, String tip, String open, String close) {
+    return Tooltip(
+      message: tip,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(6),
+        onTap: () => _wrapSel(open, close),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6),
+          child: Icon(icon, size: 17),
+        ),
+      ),
+    );
+  }
+
+  Widget _bbTxt(String label, String tip, String open, String close) {
+    return Tooltip(
+      message: tip,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(6),
+        onTap: () => _wrapSel(open, close),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 7),
+          child: Text(label,
+              style: const TextStyle(
+                  fontSize: 12.5, fontWeight: FontWeight.w700, height: 1.1)),
+        ),
+      ),
+    );
+  }
+
+  Widget _bbDiv() {
+    return Container(
+      width: 1,
+      height: 16,
+      margin: const EdgeInsets.symmetric(horizontal: 5),
+      color: Theme.of(context).colorScheme.outlineVariant,
     );
   }
 

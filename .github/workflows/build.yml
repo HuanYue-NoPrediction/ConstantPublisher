@@ -27,6 +27,9 @@ jobs:
       - name: 拉取依赖
         run: flutter pub get
 
+      - name: 生成应用图标(exe / 任务栏)
+        run: dart run flutter_launcher_icons
+
       - name: 构建 Release
         run: flutter build windows --release
 
