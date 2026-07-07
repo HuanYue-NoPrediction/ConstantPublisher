@@ -136,8 +136,9 @@ Future<String?> downloadZip(String url,
 
 Future<String?> applyUpdate(String zipPath) async {
   if (!Platform.isWindows) return '自动更新目前仅支持 Windows';
-  final staging = Directory(p.join(
-      Directory.systemTemp.path, 'dst_mod_publisher_update', 'staging'));
+  final updDir =
+      Directory(p.join(Directory.systemTemp.path, 'dst_mod_publisher_update'));
+  final staging = Directory(p.join(updDir.path, 'staging'));
   if (await staging.exists()) await staging.delete(recursive: true);
   await staging.create(recursive: true);
   final unzip = await Process.run('powershell', [
@@ -149,28 +150,25 @@ Future<String?> applyUpdate(String zipPath) async {
   if (!await File(p.join(staging.path, 'dst_mod_publisher.exe')).exists()) {
     return '更新包无效:缺少主程序';
   }
+  final stagedHelper =
+      File(p.join(staging.path, 'helper', 'CpSteamHelper.exe'));
+  if (!await stagedHelper.exists()) return '更新包无效:缺少 helper';
+  final runner = File(p.join(updDir.path, 'apply_helper.exe'));
+  try {
+    await stagedHelper.copy(runner.path);
+  } catch (_) {
+    return '无法准备更新程序(apply_helper.exe 被占用?)';
+  }
   final installDir = File(Platform.resolvedExecutable).parent.path;
-  final bat = File(p.join(
-      Directory.systemTemp.path, 'dst_mod_publisher_update', 'apply.bat'));
-  final vbs = File(p.join(
-      Directory.systemTemp.path, 'dst_mod_publisher_update', 'apply.vbs'));
-  await bat.writeAsString('''
-@echo off
-:wait
-tasklist /FI "PID eq $pid" 2>nul | find "$pid" >nul
-if not errorlevel 1 (
-  timeout /t 1 /nobreak >nul
-  goto wait
-)
-robocopy "${staging.path}" "$installDir" /E /NFL /NDL /NJH /NJS /NP >nul
-start "" "${p.join(installDir, 'dst_mod_publisher.exe')}"
-rmdir /S /Q "${staging.path}"
-del "${vbs.path}"
-del "%~f0"
-''');
-  await vbs.writeAsString(
-      'CreateObject("WScript.Shell").Run """${bat.path}""", 0, False\r\n');
-  await Process.start('wscript', [vbs.path],
+  await Process.start(
+      runner.path,
+      [
+        'apply',
+        '$pid',
+        staging.path,
+        installDir,
+        p.join(installDir, 'dst_mod_publisher.exe'),
+      ],
       mode: ProcessStartMode.detached);
   exit(0);
 }

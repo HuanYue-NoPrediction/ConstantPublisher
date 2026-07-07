@@ -61,6 +61,11 @@ internal static class Program
     {
         Console.OutputEncoding = new UTF8Encoding(false);
 
+        if (args.Length >= 5 && args[0] == "apply")
+        {
+            return RunApply(int.Parse(args[1]), args[2], args[3], args[4]);
+        }
+
         // 模式四:desc <publishedfileid> —— 按各语言分别取该条目的标题/简介
         // (list 只取默认语言;多语言编辑需要每种语言各自的底稿)
         if (args.Length >= 2 && args[0] == "desc")
@@ -154,6 +159,37 @@ internal static class Program
         {
             SteamAPI.Shutdown();
         }
+    }
+
+    private static int RunApply(int oldPid, string staging, string installDir, string exePath)
+    {
+        try
+        {
+            var old = System.Diagnostics.Process.GetProcessById(oldPid);
+            if (!old.WaitForExit(120000)) return 1;
+        }
+        catch { }
+        for (var i = 0; ; i++)
+        {
+            try { CopyDir(staging, installDir); break; }
+            catch { if (i >= 4) return 1; Thread.Sleep(1000); }
+        }
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exePath)
+        {
+            UseShellExecute = true,
+            WorkingDirectory = installDir,
+        });
+        try { Directory.Delete(staging, true); } catch { }
+        return 0;
+    }
+
+    private static void CopyDir(string src, string dst)
+    {
+        Directory.CreateDirectory(dst);
+        foreach (var f in Directory.GetFiles(src))
+            File.Copy(f, Path.Combine(dst, Path.GetFileName(f)), true);
+        foreach (var d in Directory.GetDirectories(src))
+            CopyDir(d, Path.Combine(dst, Path.GetFileName(d)));
     }
 
     private static int Run(Request req)
