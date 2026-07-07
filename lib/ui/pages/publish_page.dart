@@ -503,34 +503,34 @@ class _PublishPageState extends State<PublishPage> {
         ),
         if (!isNew) ...[
           const SizedBox(height: 12),
-          Wrap(
-            spacing: 7,
-            runSpacing: 7,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Text('本次更新:',
-                  style: TextStyle(
-                      fontSize: 12.5, color: scheme.onSurfaceVariant)),
-              for (final (k, label) in const [
-                ('content', '内容文件'),
-                ('text', '标题与简介'),
-                ('preview', '封面图'),
-                ('tags', '标签'),
-                ('visibility', '可见性'),
-              ])
-                FilterChip(
-                  label: Text(label),
-                  selected: _parts.contains(k),
-                  visualDensity: VisualDensity.compact,
-                  onSelected: (v) => setState(() {
-                    if (v) {
-                      _parts.add(k);
-                    } else if (_parts.length > 1) {
-                      _parts.remove(k);
-                    }
-                  }),
-                ),
-            ],
+          SectionCard(
+            title: '本次更新哪些内容',
+            subtitle: '未勾选的部分保持工坊现状不变;只改简介时取消勾选内容文件,几秒就能发完',
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final (k, label, icon) in const [
+                  ('content', '内容文件', Icons.folder_zip_outlined),
+                  ('text', '标题与简介', Icons.description_outlined),
+                  ('preview', '封面图', Icons.image_outlined),
+                  ('tags', '标签', Icons.sell_outlined),
+                  ('visibility', '可见性', Icons.visibility_outlined),
+                ])
+                  FilterChip(
+                    avatar: Icon(icon, size: 16),
+                    label: Text(label),
+                    selected: _parts.contains(k),
+                    onSelected: (v) => setState(() {
+                      if (v) {
+                        _parts.add(k);
+                      } else if (_parts.length > 1) {
+                        _parts.remove(k);
+                      }
+                    }),
+                  ),
+              ],
+            ),
           ),
         ],
         const SizedBox(height: 12),
