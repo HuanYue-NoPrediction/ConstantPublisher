@@ -674,8 +674,7 @@ class _PublishPageState extends State<PublishPage> {
                   for (final m in state.mods)
                     DropdownMenuEntry(
                       value: m.path,
-                      label:
-                          '${m.info.name.isEmpty ? m.folderName : m.info.name} · ${m.folderName}',
+                      label: m.folderName,
                       labelWidget: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
