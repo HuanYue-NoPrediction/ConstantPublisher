@@ -368,6 +368,18 @@ class _PublishPageState extends State<PublishPage> {
     );
   }
 
+  Future<void> _pickContentFolder(
+      AppState state, Mod current, String? targetId) async {
+    final picked = await showDialog<Mod>(
+      context: context,
+      builder: (_) =>
+          _FolderPickDialog(mods: state.mods, currentPath: current.path),
+    );
+    if (picked != null && mounted) {
+      state.startPublish(content: picked, targetId: targetId, goto: false);
+    }
+  }
+
   String _fmtCount(int n) {
     if (n >= 10000) return '${(n / 10000).toStringAsFixed(1)}w';
     if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}k';
@@ -662,61 +674,50 @@ class _PublishPageState extends State<PublishPage> {
         Row(
           children: [
             Expanded(
-              child: DropdownMenu<String>(
-                key: ValueKey(mod.path),
-                initialSelection: mod.path,
-                leadingIcon: const Icon(Icons.folder_outlined),
-                label: const Text('内容文件夹'),
-                expandedInsets: EdgeInsets.zero,
-                enableFilter: true,
-                requestFocusOnTap: true,
-                dropdownMenuEntries: [
-                  for (final m in state.mods)
-                    DropdownMenuEntry(
-                      value: m.path,
-                      label: m.folderName,
-                      labelWidget: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            m.info.name.isEmpty
-                                ? m.folderName
-                                : m.info.name,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontSize: 12,
-                                color: scheme.onSurfaceVariant),
-                          ),
-                          const SizedBox(height: 3),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: scheme.primaryContainer,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              m.folderName,
-                              style: TextStyle(
-                                  fontSize: 13,
-                                  fontFamily: 'monospace',
-                                  fontWeight: FontWeight.w700,
-                                  color: scheme.onPrimaryContainer),
-                            ),
-                          ),
-                        ],
+              child: InkWell(
+                borderRadius: BorderRadius.circular(6),
+                onTap: () => _pickContentFolder(state, mod, targetId),
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: '内容文件夹',
+                    border: OutlineInputBorder(),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                  ),
+                  child: Row(children: [
+                    Icon(Icons.folder_outlined,
+                        size: 18, color: scheme.onSurfaceVariant),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: scheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        mod.folderName,
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontFamily: 'monospace',
+                            fontWeight: FontWeight.w700,
+                            color: scheme.onPrimaryContainer),
                       ),
                     ),
-                ],
-                onSelected: (v) {
-                  final m =
-                      state.mods.where((x) => x.path == v).firstOrNull;
-                  if (m != null) {
-                    state.startPublish(
-                        content: m, targetId: targetId, goto: false);
-                  }
-                },
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        mod.info.name,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 12.5,
+                            color: scheme.onSurfaceVariant),
+                      ),
+                    ),
+                    Icon(Icons.arrow_drop_down,
+                        color: scheme.onSurfaceVariant),
+                  ]),
+                ),
               ),
             ),
             const SizedBox(width: 10),
@@ -1336,6 +1337,100 @@ class _PublishPageState extends State<PublishPage> {
               ),
             ],
           ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FolderPickDialog extends StatefulWidget {
+  final List<Mod> mods;
+  final String currentPath;
+  const _FolderPickDialog({required this.mods, required this.currentPath});
+
+  @override
+  State<_FolderPickDialog> createState() => _FolderPickDialogState();
+}
+
+class _FolderPickDialogState extends State<_FolderPickDialog> {
+  String _q = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final q = _q.toLowerCase();
+    final list = widget.mods
+        .where((m) =>
+            q.isEmpty ||
+            m.folderName.toLowerCase().contains(q) ||
+            m.info.name.toLowerCase().contains(q))
+        .toList();
+    return AlertDialog(
+      title: const Text('选择内容文件夹'),
+      content: SizedBox(
+        width: 460,
+        height: 440,
+        child: Column(children: [
+          TextField(
+            autofocus: true,
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.search, size: 18),
+              hintText: '输入文件夹名或模组名过滤',
+              isDense: true,
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (v) => setState(() => _q = v.trim()),
+          ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: list.isEmpty
+                ? Center(
+                    child: Text('没有匹配的文件夹',
+                        style: TextStyle(color: scheme.onSurfaceVariant)))
+                : ListView.builder(
+                    itemCount: list.length,
+                    itemBuilder: (_, i) {
+                      final m = list[i];
+                      final selected = m.path == widget.currentPath;
+                      return InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () => Navigator.of(context).pop(m),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 7),
+                          child: Row(children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 9, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: scheme.primaryContainer,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                m.folderName,
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    fontFamily: 'monospace',
+                                    fontWeight: FontWeight.w700,
+                                    color: scheme.onPrimaryContainer),
+                              ),
+                            ),
+                            const Spacer(),
+                            if (selected)
+                              Icon(Icons.check,
+                                  size: 17, color: scheme.primary),
+                          ]),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ]),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('取消'),
         ),
       ],
     );
