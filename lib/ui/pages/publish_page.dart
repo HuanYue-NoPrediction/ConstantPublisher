@@ -368,6 +368,12 @@ class _PublishPageState extends State<PublishPage> {
     );
   }
 
+  String _fmtCount(int n) {
+    if (n >= 10000) return '${(n / 10000).toStringAsFixed(1)}w';
+    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}k';
+    return '$n';
+  }
+
   String _fmtTime(DateTime t) =>
       '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}:${t.second.toString().padLeft(2, '0')}';
 
@@ -454,52 +460,142 @@ class _PublishPageState extends State<PublishPage> {
         Text('发布', style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 14),
         // 发布目标
-        DropdownButtonFormField<String>(
-          initialValue: targetId ?? '__new__',
-          isExpanded: true,
-          decoration: const InputDecoration(
-              labelText: '发布目标',
-              border: OutlineInputBorder(),
-              isDense: true),
-          items: [
-            const DropdownMenuItem(
-              value: '__new__',
-              child: Row(children: [
-                Icon(Icons.add_circle_outline, size: 20),
-                SizedBox(width: 10),
-                Text('新建工坊条目'),
+        SectionCard(
+          title: '发布目标',
+          subtitle: isNew
+              ? '将新建一个工坊条目;要更新老模组,在下面选中它'
+              : '将更新选中的工坊条目',
+          child: DropdownButtonFormField<String>(
+            initialValue: targetId ?? '__new__',
+            isExpanded: true,
+            itemHeight: null,
+            decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
+            selectedItemBuilder: (context) => [
+              Row(children: [
+                Icon(Icons.add_circle_outline,
+                    size: 18, color: scheme.primary),
+                const SizedBox(width: 8),
+                const Text('新建工坊条目',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
               ]),
-            ),
-            for (final it in state.remoteItems)
-              DropdownMenuItem(
-                value: it.id,
-                child: Row(children: [
+              for (final it in state.remoteItems)
+                Row(children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: it.previewUrl.isEmpty
                         ? Icon(Icons.cloud_outlined,
-                            size: 20, color: scheme.onSurfaceVariant)
+                            size: 18, color: scheme.onSurfaceVariant)
                         : Image.network(it.previewUrl,
                             width: 22,
                             height: 22,
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => Icon(
                                 Icons.cloud_off_outlined,
-                                size: 20,
+                                size: 18,
                                 color: scheme.onSurfaceVariant)),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      '${it.title}  ·  v${it.version.isEmpty ? '?' : it.version}',
+                      '${it.title} · v${it.version.isEmpty ? '?' : it.version}',
                       overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                   ),
                 ]),
+            ],
+            items: [
+              DropdownMenuItem(
+                value: '__new__',
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: scheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Icon(Icons.add,
+                          size: 20, color: scheme.onPrimaryContainer),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('新建工坊条目',
+                              style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w600)),
+                          Text('在创意工坊创建一个全新条目',
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  color: scheme.onSurfaceVariant)),
+                        ],
+                      ),
+                    ),
+                  ]),
+                ),
               ),
-          ],
-          onChanged: (v) =>
-              state.setPublishTarget(v == '__new__' ? null : v),
+              for (final it in state.remoteItems)
+                DropdownMenuItem(
+                  value: it.id,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: it.previewUrl.isEmpty
+                            ? Container(
+                                width: 36,
+                                height: 36,
+                                color: scheme.surfaceContainerHighest,
+                                child: Icon(Icons.cloud_outlined,
+                                    size: 18,
+                                    color: scheme.onSurfaceVariant))
+                            : Image.network(it.previewUrl,
+                                width: 36,
+                                height: 36,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                    width: 36,
+                                    height: 36,
+                                    color:
+                                        scheme.surfaceContainerHighest)),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(it.title,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w600)),
+                            Text(
+                              'v${it.version.isEmpty ? '?' : it.version} · ${_fmtCount(it.subs)} 订阅',
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  color: scheme.onSurfaceVariant),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ]),
+                  ),
+                ),
+            ],
+            onChanged: (v) =>
+                state.setPublishTarget(v == '__new__' ? null : v),
+          ),
         ),
         if (!isNew) ...[
           const SizedBox(height: 12),
