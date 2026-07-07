@@ -671,70 +671,79 @@ class _PublishPageState extends State<PublishPage> {
         ],
         const SizedBox(height: 12),
         // 内容文件夹
-        Row(
-          children: [
-            Expanded(
-              child: InkWell(
-                borderRadius: BorderRadius.circular(6),
-                onTap: () => _pickContentFolder(state, mod, targetId),
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: '内容文件夹',
-                    border: OutlineInputBorder(),
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                  ),
-                  child: Row(children: [
-                    Icon(Icons.folder_outlined,
-                        size: 18, color: scheme.onSurfaceVariant),
-                    const SizedBox(width: 8),
-                    Container(
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+            child: Row(
+              children: [
+                const Text('内容文件夹',
+                    style: TextStyle(
+                        fontSize: 13.5, fontWeight: FontWeight.w600)),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => _pickContentFolder(state, mod, targetId),
+                    child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
+                          horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: scheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(6),
+                        color: scheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Text(
-                        mod.folderName,
-                        style: TextStyle(
-                            fontSize: 13,
-                            fontFamily: 'monospace',
-                            fontWeight: FontWeight.w700,
-                            color: scheme.onPrimaryContainer),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        mod.info.name,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: 12.5,
+                      child: Row(children: [
+                        Icon(Icons.folder_outlined,
+                            size: 17, color: scheme.onSurfaceVariant),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: scheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            mod.folderName,
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontFamily: 'monospace',
+                                fontWeight: FontWeight.w700,
+                                color: scheme.onPrimaryContainer),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            mod.info.name,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 12.5,
+                                color: scheme.onSurfaceVariant),
+                          ),
+                        ),
+                        Icon(Icons.arrow_drop_down,
                             color: scheme.onSurfaceVariant),
-                      ),
+                      ]),
                     ),
-                    Icon(Icons.arrow_drop_down,
-                        color: scheme.onSurfaceVariant),
-                  ]),
+                  ),
                 ),
-              ),
+                const SizedBox(width: 10),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final dir = await getDirectoryPath();
+                    if (dir == null) return;
+                    final m = await state.addExternalFolder(dir);
+                    if (m != null) {
+                      state.startPublish(
+                          content: m, targetId: targetId, goto: false);
+                    }
+                  },
+                  icon: const Icon(Icons.folder_open, size: 18),
+                  label: const Text('其他文件夹…'),
+                ),
+              ],
             ),
-            const SizedBox(width: 10),
-            OutlinedButton.icon(
-              onPressed: () async {
-                final dir = await getDirectoryPath();
-                if (dir == null) return;
-                final m = await state.addExternalFolder(dir);
-                if (m != null) {
-                  state.startPublish(
-                      content: m, targetId: targetId, goto: false);
-                }
-              },
-              icon: const Icon(Icons.folder_open, size: 18),
-              label: const Text('其他文件夹…'),
-            ),
-          ],
+          ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
