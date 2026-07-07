@@ -107,26 +107,50 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  String? updateStage;
+  double? updateProgress;
+
   Future<void> startUpdate() async {
     final u = update;
     if (u == null || busy) return;
     busy = true;
+    updateStage = '准备更新…';
+    updateProgress = null;
     notifyListeners();
+    var lastNotified = 0.0;
     try {
       var zip = u.zipPath;
       if (zip == null && u.downloadUrl != null) {
         log(LogLevel.info, '正在从 ${u.source} 下载 v${u.version}…');
-        zip = await downloadZip(u.downloadUrl!);
+        zip = await downloadZip(u.downloadUrl!, onProgress: (done, total) {
+          if (total > 0) {
+            final frac = done / total;
+            if (frac - lastNotified < 0.01 && frac < 1) return;
+            lastNotified = frac;
+            updateProgress = frac;
+            updateStage =
+                '下载 v${u.version} · ${(done / 1048576).toStringAsFixed(1)}/${(total / 1048576).toStringAsFixed(1)} MB';
+          } else {
+            updateStage =
+                '下载 v${u.version} · ${(done / 1048576).toStringAsFixed(1)} MB';
+          }
+          notifyListeners();
+        });
       }
       if (zip == null) {
         log(LogLevel.error, '更新包获取失败,稍后重试');
         return;
       }
+      updateStage = '解压并替换文件,应用即将自动重启…';
+      updateProgress = null;
+      notifyListeners();
       log(LogLevel.info, '应用更新中,即将自动重启…');
       final err = await applyUpdate(zip);
       if (err != null) log(LogLevel.error, '更新失败:$err');
     } finally {
       busy = false;
+      updateStage = null;
+      updateProgress = null;
       notifyListeners();
     }
   }

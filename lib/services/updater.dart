@@ -102,7 +102,8 @@ Future<UpdateInfo?> _checkGithubApi() async {
   return null;
 }
 
-Future<String?> downloadZip(String url) async {
+Future<String?> downloadZip(String url,
+    {void Function(int done, int total)? onProgress}) async {
   final client = HttpClient()
     ..connectionTimeout = const Duration(seconds: 10);
   try {
@@ -113,7 +114,18 @@ Future<String?> downloadZip(String url) async {
     final out = File(p.join(
         Directory.systemTemp.path, 'dst_mod_publisher_update', 'update.zip'));
     await out.parent.create(recursive: true);
-    await res.pipe(out.openWrite());
+    final total = res.contentLength;
+    final sink = out.openWrite();
+    var done = 0;
+    try {
+      await for (final chunk in res) {
+        sink.add(chunk);
+        done += chunk.length;
+        onProgress?.call(done, total);
+      }
+    } finally {
+      await sink.close();
+    }
     return out.path;
   } catch (_) {
     return null;

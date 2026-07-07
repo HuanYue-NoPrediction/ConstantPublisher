@@ -55,18 +55,30 @@ class _DashboardPageState extends State<DashboardPage> {
             subtitle:
                 '来源:${state.update!.source} · 当前 v$kAppVersion · 更新完成后自动重启',
             trailing: Icon(Icons.system_update, color: scheme.primary),
-            child: Row(children: [
-              FilledButton.icon(
-                onPressed: state.busy ? null : state.startUpdate,
-                icon: const Icon(Icons.download),
-                label: const Text('立即更新'),
-              ),
-              const SizedBox(width: 10),
-              TextButton(
-                onPressed: state.dismissUpdate,
-                child: const Text('本次忽略'),
-              ),
-            ]),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  FilledButton.icon(
+                    onPressed: state.busy ? null : state.startUpdate,
+                    icon: const Icon(Icons.download),
+                    label: const Text('立即更新'),
+                  ),
+                  const SizedBox(width: 10),
+                  TextButton(
+                    onPressed: state.dismissUpdate,
+                    child: const Text('本次忽略'),
+                  ),
+                ]),
+                if (state.updateStage != null) ...[
+                  const SizedBox(height: 12),
+                  Text(state.updateStage!,
+                      style: const TextStyle(fontSize: 12)),
+                  const SizedBox(height: 6),
+                  LinearProgressIndicator(value: state.updateProgress),
+                ],
+              ],
+            ),
           ),
           const SizedBox(height: 14),
         ],
