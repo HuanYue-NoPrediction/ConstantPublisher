@@ -552,42 +552,35 @@ class _PublishPageState extends State<PublishPage> {
                       value: m.path,
                       label:
                           '${m.info.name.isEmpty ? m.folderName : m.info.name} · ${m.folderName}',
-                      labelWidget: Row(
+                      labelWidget: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Flexible(
-                            child: Text(
-                              m.info.name.isEmpty
-                                  ? m.folderName
-                                  : m.info.name,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w600),
-                            ),
+                          Text(
+                            m.info.name.isEmpty
+                                ? m.folderName
+                                : m.info.name,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: scheme.onSurfaceVariant),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(height: 3),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 7, vertical: 2),
+                                horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: scheme.secondaryContainer,
-                              borderRadius: BorderRadius.circular(5),
+                              color: scheme.primaryContainer,
+                              borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
                               m.folderName,
                               style: TextStyle(
-                                  fontSize: 11,
+                                  fontSize: 13,
                                   fontFamily: 'monospace',
-                                  color: scheme.onSecondaryContainer),
+                                  fontWeight: FontWeight.w700,
+                                  color: scheme.onPrimaryContainer),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'v${m.info.version}',
-                            style: TextStyle(
-                                fontSize: 11,
-                                color: scheme.onSurfaceVariant),
                           ),
                         ],
                       ),
