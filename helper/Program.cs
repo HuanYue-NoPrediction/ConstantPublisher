@@ -59,12 +59,12 @@ internal static class Program
 
     private static int Main(string[] args)
     {
-        Console.OutputEncoding = new UTF8Encoding(false);
-
         if (args.Length >= 5 && args[0] == "apply")
         {
             return RunApply(int.Parse(args[1]), args[2], args[3], args[4]);
         }
+
+        Console.OutputEncoding = new UTF8Encoding(false);
 
         // 模式四:desc <publishedfileid> —— 按各语言分别取该条目的标题/简介
         // (list 只取默认语言;多语言编辑需要每种语言各自的底稿)
@@ -169,18 +169,39 @@ internal static class Program
             if (!old.WaitForExit(120000)) return 1;
         }
         catch { }
-        for (var i = 0; ; i++)
+        KillStaleHelpers(installDir);
+        var copied = false;
+        for (var i = 0; i < 5 && !copied; i++)
         {
-            try { CopyDir(staging, installDir); break; }
-            catch { if (i >= 4) return 1; Thread.Sleep(1000); }
+            try { CopyDir(staging, installDir); copied = true; }
+            catch { Thread.Sleep(1000); }
         }
         System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exePath)
         {
             UseShellExecute = true,
             WorkingDirectory = installDir,
         });
+        if (!copied) return 1;
         try { Directory.Delete(staging, true); } catch { }
         return 0;
+    }
+
+    private static void KillStaleHelpers(string installDir)
+    {
+        foreach (var pr in System.Diagnostics.Process.GetProcessesByName("CpSteamHelper"))
+        {
+            try
+            {
+                var path = pr.MainModule?.FileName;
+                if (path != null &&
+                    path.StartsWith(installDir, StringComparison.OrdinalIgnoreCase))
+                {
+                    pr.Kill();
+                    pr.WaitForExit(3000);
+                }
+            }
+            catch { }
+        }
     }
 
     private static void CopyDir(string src, string dst)
