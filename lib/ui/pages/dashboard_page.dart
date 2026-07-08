@@ -33,14 +33,6 @@ class _DashboardPageState extends State<DashboardPage> {
     final scheme = Theme.of(context).colorScheme;
     final sem = SemanticColors.of(context);
     final items = state.remoteItems;
-
-    final totalSubs = items.fold<int>(0, (a, it) => a + it.subs);
-    final totalFav = items.fold<int>(0, (a, it) => a + it.favorites);
-    final totalComments = items.fold<int>(0, (a, it) => a + it.comments);
-    final up = items.fold<int>(0, (a, it) => a + it.votesUp);
-    final down = items.fold<int>(0, (a, it) => a + it.votesDown);
-    final ratio = (up + down) == 0 ? null : up / (up + down);
-
     final top = [...items]..sort((a, b) => b.subs.compareTo(a.subs));
 
     return ListView(
@@ -114,51 +106,58 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
         const SizedBox(height: 14),
 
-        // 聚合数据
+        // 公告栏:饥荒官方动态(游戏更新往往意味着模组要适配)
+        SectionCard(
+          title: '公告栏 · 饥荒官方动态',
+          subtitle: '游戏更新可能影响模组兼容;点击在 Steam 中查看',
+          child: state.news.isEmpty
+              ? Text('动态加载中…(拉取不到时检查网络)',
+                  style: TextStyle(
+                      fontSize: 12.5, color: scheme.onSurfaceVariant))
+              : Column(
+                  children: [
+                    for (final n in state.news.take(5))
+                      InkWell(
+                        borderRadius: BorderRadius.circular(6),
+                        onTap: () => openSteamPage(n.url),
+                        child: Padding(
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 5),
+                          child: Row(children: [
+                            Icon(Icons.campaign_outlined,
+                                size: 15, color: scheme.primary),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                n.title,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(_ago(n.date),
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    color: scheme.onSurfaceVariant)),
+                          ]),
+                        ),
+                      ),
+                  ],
+                ),
+        ),
+        const SizedBox(height: 14),
+
         if (items.isEmpty)
           SectionCard(
-            title: '工坊数据',
+            title: '模组排行',
             child: Text(
               state.steamReady
                   ? '点上方「刷新数据」拉取名下工坊条目'
-                  : '连接 Steam 后即可查看订阅、收藏、评论等数据',
+                  : '连接 Steam 后即可查看名下模组数据',
               style: TextStyle(color: scheme.onSurfaceVariant),
             ),
           )
-        else ...[
-          Row(children: [
-            _Metric(
-                icon: Icons.people_alt_outlined,
-                label: '总订阅',
-                value: _fmt(totalSubs),
-                tint: scheme.primary),
-            const SizedBox(width: 12),
-            _Metric(
-                icon: Icons.star_outline,
-                label: '总收藏',
-                value: _fmt(totalFav),
-                tint: sem.warn),
-          ]),
-          const SizedBox(height: 12),
-          Row(children: [
-            _Metric(
-                icon: Icons.mode_comment_outlined,
-                label: '总评论',
-                value: _fmt(totalComments),
-                tint: scheme.tertiary),
-            const SizedBox(width: 12),
-            _Metric(
-                icon: Icons.thumb_up_outlined,
-                label: '好评率',
-                value: ratio == null
-                    ? '—'
-                    : '${(ratio * 100).round()}%',
-                sub: ratio == null ? '暂无评价' : '$up 赞 · $down 踩',
-                tint: sem.success),
-          ]),
-          const SizedBox(height: 14),
-
-          // 模组排行
+        else
           SectionCard(
             title: '模组排行',
             subtitle: '按订阅数,共 ${items.length} 个',
@@ -169,7 +168,6 @@ class _DashboardPageState extends State<DashboardPage> {
               ],
             ),
           ),
-        ],
 
         if (state.busy && state.progress != null) ...[
           const SizedBox(height: 14),
@@ -197,53 +195,14 @@ String _fmt(int n) {
   return '$n';
 }
 
-class _Metric extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  final String? sub;
-  final Color tint;
-  const _Metric({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.tint,
-    this.sub,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Expanded(
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
-                Icon(icon, size: 17, color: tint),
-                const SizedBox(width: 7),
-                Text(label,
-                    style:
-                        TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant)),
-              ]),
-              const SizedBox(height: 8),
-              Text(value,
-                  style: const TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w600,
-                      fontFeatures: [FontFeature.tabularFigures()])),
-              if (sub != null)
-                Text(sub!,
-                    style: TextStyle(
-                        fontSize: 11, color: scheme.onSurfaceVariant)),
-            ],
-          ),
-        ),
-      ),
-    );
+String _ago(DateTime t) {
+  final d = DateTime.now().difference(t);
+  if (d.inDays >= 30) {
+    return '${t.year}-${t.month.toString().padLeft(2, '0')}-${t.day.toString().padLeft(2, '0')}';
   }
+  if (d.inDays >= 1) return '${d.inDays} 天前';
+  if (d.inHours >= 1) return '${d.inHours} 小时前';
+  return '刚刚';
 }
 
 class _RankRow extends StatelessWidget {

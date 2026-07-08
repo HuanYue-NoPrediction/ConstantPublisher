@@ -54,6 +54,51 @@ class WorkshopItemRemote {
   }
 }
 
+class NewsItem {
+  final String title;
+  final String url;
+  final DateTime date;
+  final String feed;
+  const NewsItem(
+      {required this.title,
+      required this.url,
+      required this.date,
+      required this.feed});
+}
+
+Future<List<NewsItem>> fetchDstNews({int count = 6}) async {
+  final uri = Uri.https(
+      'api.steampowered.com', '/ISteamNews/v0002/GetNewsForApp/v0002/', {
+    'appid': '322330',
+    'count': '$count',
+    'maxlength': '1',
+    'format': 'json',
+  });
+  final client = HttpClient()..connectionTimeout = const Duration(seconds: 8);
+  try {
+    final req = await client.getUrl(uri);
+    final res = await req.close().timeout(const Duration(seconds: 10));
+    if (res.statusCode != 200) return [];
+    final j = jsonDecode(await res.transform(utf8.decoder).join())
+        as Map<String, dynamic>;
+    final items = (j['appnews']?['newsitems'] as List?) ?? const [];
+    return [
+      for (final it in items.cast<Map<String, dynamic>>())
+        NewsItem(
+          title: it['title'] as String? ?? '',
+          url: it['url'] as String? ?? '',
+          date: DateTime.fromMillisecondsSinceEpoch(
+              ((it['date'] as num?)?.toInt() ?? 0) * 1000),
+          feed: it['feedlabel'] as String? ?? '',
+        ),
+    ];
+  } catch (_) {
+    return [];
+  } finally {
+    client.close();
+  }
+}
+
 /// metadata 里长得像版本号才认(防止其他工具写的任意内容混进来)。
 String versionFromMeta(String? meta) {
   final m = (meta ?? '').trim();

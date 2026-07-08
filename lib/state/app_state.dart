@@ -77,9 +77,20 @@ class AppState extends ChangeNotifier {
       unawaited(refreshRemote());
     }
     unawaited(checkUpdates());
+    unawaited(fetchNews());
     _updateTimer = Timer.periodic(const Duration(minutes: 20), (_) {
       if (update == null && !busy) unawaited(checkUpdates());
     });
+  }
+
+  List<NewsItem> news = [];
+
+  Future<void> fetchNews() async {
+    final n = await fetchDstNews();
+    if (n.isNotEmpty) {
+      news = n;
+      notifyListeners();
+    }
   }
 
   UpdateInfo? update;
