@@ -9,7 +9,8 @@ import '../../version.dart';
 import '../widgets/bits.dart';
 
 const List<(String, String)> kQqGroups = [
-  ('模组交流群', '000000000'),
+  ('交流一群', '1018104063'),
+  ('交流二群', '620984175'),
 ];
 
 class DashboardPage extends StatefulWidget {
