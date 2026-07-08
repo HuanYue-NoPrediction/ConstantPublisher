@@ -21,6 +21,8 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
+  String _rankQ = '';
+
   @override
   void initState() {
     super.initState();
@@ -231,12 +233,40 @@ class _DashboardPageState extends State<DashboardPage> {
           SectionCard(
             title: '模组排行',
             subtitle: '按订阅数,共 ${items.length} 个',
-            child: Column(
-              children: [
-                for (final it in top.take(6))
-                  _RankRow(item: it, scheme: scheme, sem: sem),
-              ],
+            trailing: SizedBox(
+              width: 220,
+              child: TextField(
+                onChanged: (v) =>
+                    setState(() => _rankQ = v.trim().toLowerCase()),
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.search, size: 17),
+                  hintText: '搜索模组…',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                ),
+                style: const TextStyle(fontSize: 13),
+              ),
             ),
+            child: Builder(builder: (_) {
+              final filtered = [
+                for (final it in top)
+                  if (_rankQ.isEmpty ||
+                      it.title.toLowerCase().contains(_rankQ))
+                    it,
+              ];
+              if (filtered.isEmpty) {
+                return Text('没有匹配的模组',
+                    style: TextStyle(color: scheme.onSurfaceVariant));
+              }
+              return Column(
+                children: [
+                  for (final it in filtered)
+                    _RankRow(item: it, scheme: scheme, sem: sem),
+                ],
+              );
+            }),
           ),
 
         if (state.busy && state.progress != null) ...[
