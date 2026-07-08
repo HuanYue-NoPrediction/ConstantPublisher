@@ -68,7 +68,7 @@ class NewsItem {
 
 Future<List<NewsItem>> fetchDstNews({int count = 6}) async {
   final uri = Uri.https(
-      'api.steampowered.com', '/ISteamNews/v0002/GetNewsForApp/v0002/', {
+      'api.steampowered.com', '/ISteamNews/GetNewsForApp/v0002/', {
     'appid': '322330',
     'count': '$count',
     'maxlength': '1',

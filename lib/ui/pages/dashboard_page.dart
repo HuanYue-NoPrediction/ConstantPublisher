@@ -103,7 +103,10 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
               const SizedBox(width: 10),
               OutlinedButton.icon(
-                onPressed: state.refreshRemote,
+                onPressed: () {
+                  state.refreshRemote();
+                  if (state.news.isEmpty) state.fetchNews();
+                },
                 icon: const Icon(Icons.refresh),
                 label: const Text('刷新数据'),
               ),
@@ -155,28 +158,59 @@ class _DashboardPageState extends State<DashboardPage> {
 
         SectionCard(
           title: '交流群',
-          subtitle: '点击复制群号,到 QQ 搜索加入',
+          subtitle: '欢迎大家加入 modder 交流群!为 DST 社区添砖加瓦',
           child: Wrap(
-            spacing: 10,
-            runSpacing: 8,
+            spacing: 12,
+            runSpacing: 10,
             children: [
               for (final (name, num) in kQqGroups)
-                ActionChip(
-                  avatar: ClipOval(
-                    child: Image.network(
-                      'https://p.qlogo.cn/gh/$num/$num/100',
-                      width: 18,
-                      height: 18,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                          const Icon(Icons.groups_outlined, size: 16),
-                    ),
-                  ),
-                  label: Text('$name · $num'),
-                  onPressed: () {
+                InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: () {
                     Clipboard.setData(ClipboardData(text: num));
                     toast(context, '群号已复制:$num');
                   },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: scheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ClipOval(
+                          child: Image.network(
+                            'https://p.qlogo.cn/gh/$num/$num/100',
+                            width: 34,
+                            height: 34,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Icon(
+                                Icons.groups_outlined,
+                                size: 28,
+                                color: scheme.onSurfaceVariant),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(name,
+                                style: const TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 2),
+                            Text('群号 $num · 点击复制',
+                                style: TextStyle(
+                                    fontSize: 11.5,
+                                    color: scheme.onSurfaceVariant)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
             ],
           ),
