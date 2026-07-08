@@ -1,6 +1,7 @@
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../state/app_state.dart';
 import '../../theme.dart';
@@ -208,10 +209,42 @@ class SettingsPage extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 4),
               Text(
+                '作者 幻月(HuanYue)· cmczl543600@outlook.com\n'
                 '开源(GPL-3.0)· 界面布局致敬 FlClash 的 Material You 设计,代码全部原创\n'
                 '非 Klei / Valve 官方软件 · Don\'t Starve 是 Klei Entertainment 商标,Steam 是 Valve 商标',
                 style:
                     TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () => launchUrl(Uri.parse(
+                        'https://github.com/HuanYue-NoPrediction/ConstantPublisher')),
+                    icon: const Icon(Icons.code, size: 16),
+                    label: const Text('GitHub'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => launchUrl(Uri.parse(
+                        'https://github.com/HuanYue-NoPrediction/ConstantPublisher/issues')),
+                    icon: const Icon(Icons.bug_report_outlined, size: 16),
+                    label: const Text('反馈问题'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => launchUrl(
+                        Uri.parse('mailto:cmczl543600@outlook.com')),
+                    icon: const Icon(Icons.mail_outline, size: 16),
+                    label: const Text('邮件联系'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => launchUrl(Uri.parse(
+                        'https://steamcommunity.com/sharedfiles/filedetails/?id=3758340920')),
+                    icon: const Icon(Icons.cloud_outlined, size: 16),
+                    label: const Text('创意工坊'),
+                  ),
+                ],
               ),
             ],
           ),
