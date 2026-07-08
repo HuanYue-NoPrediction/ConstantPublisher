@@ -161,7 +161,16 @@ class _DashboardPageState extends State<DashboardPage> {
             children: [
               for (final (name, num) in kQqGroups)
                 ActionChip(
-                  avatar: const Icon(Icons.groups_outlined, size: 16),
+                  avatar: ClipOval(
+                    child: Image.network(
+                      'https://p.qlogo.cn/gh/$num/$num/100',
+                      width: 18,
+                      height: 18,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          const Icon(Icons.groups_outlined, size: 16),
+                    ),
+                  ),
                   label: Text('$name · $num'),
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: num));
