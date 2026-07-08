@@ -239,8 +239,8 @@ class SettingsPage extends StatelessWidget {
                     label: const Text('邮件联系'),
                   ),
                   OutlinedButton.icon(
-                    onPressed: () => launchUrl(Uri.parse(
-                        'https://steamcommunity.com/sharedfiles/filedetails/?id=3758340920')),
+                    onPressed: () => openSteamPage(
+                        'https://steamcommunity.com/sharedfiles/filedetails/?id=3758340920'),
                     icon: const Icon(Icons.cloud_outlined, size: 16),
                     label: const Text('创意工坊'),
                   ),

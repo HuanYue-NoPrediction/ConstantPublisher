@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../services/workshop_api.dart';
 import '../../state/app_state.dart';
@@ -304,8 +303,8 @@ class _RankRow extends StatelessWidget {
             tooltip: '在工坊查看评论',
             visualDensity: VisualDensity.compact,
             icon: const Icon(Icons.open_in_new, size: 16),
-            onPressed: () => launchUrl(Uri.parse(
-                'https://steamcommunity.com/sharedfiles/filedetails/comments/${item.id}')),
+            onPressed: () => openSteamPage(
+                'https://steamcommunity.com/sharedfiles/filedetails/comments/${item.id}'),
           ),
         ],
       ),
