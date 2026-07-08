@@ -209,7 +209,7 @@ class SettingsPage extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 4),
               Text(
-                '作者 幻月(HuanYue)· cmczl543600@outlook.com\n'
+                '作者 唤月(HuanYue)· 1713597367@qq.com\n'
                 '开源(GPL-3.0)· 界面布局致敬 FlClash 的 Material You 设计,代码全部原创\n'
                 '非 Klei / Valve 官方软件 · Don\'t Starve 是 Klei Entertainment 商标,Steam 是 Valve 商标',
                 style:
@@ -234,7 +234,7 @@ class SettingsPage extends StatelessWidget {
                   ),
                   OutlinedButton.icon(
                     onPressed: () => launchUrl(
-                        Uri.parse('mailto:cmczl543600@outlook.com')),
+                        Uri.parse('mailto:1713597367@qq.com')),
                     icon: const Icon(Icons.mail_outline, size: 16),
                     label: const Text('邮件联系'),
                   ),
