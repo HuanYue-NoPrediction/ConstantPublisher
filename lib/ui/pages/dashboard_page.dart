@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../services/workshop_api.dart';
@@ -6,6 +7,10 @@ import '../../state/app_state.dart';
 import '../../theme.dart';
 import '../../version.dart';
 import '../widgets/bits.dart';
+
+const List<(String, String)> kQqGroups = [
+  ('模组交流群', '000000000'),
+];
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -144,6 +149,27 @@ class _DashboardPageState extends State<DashboardPage> {
                       ),
                   ],
                 ),
+        ),
+        const SizedBox(height: 14),
+
+        SectionCard(
+          title: '交流群',
+          subtitle: '点击复制群号,到 QQ 搜索加入',
+          child: Wrap(
+            spacing: 10,
+            runSpacing: 8,
+            children: [
+              for (final (name, num) in kQqGroups)
+                ActionChip(
+                  avatar: const Icon(Icons.groups_outlined, size: 16),
+                  label: Text('$name · $num'),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: num));
+                    toast(context, '群号已复制:$num');
+                  },
+                ),
+            ],
+          ),
         ),
         const SizedBox(height: 14),
 
