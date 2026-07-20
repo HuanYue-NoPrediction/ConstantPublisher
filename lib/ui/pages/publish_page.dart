@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 
+import '../../l10n/gen/app_localizations.dart';
 import '../../models/mod.dart';
 import '../../services/draft_store.dart';
 import '../../services/stager.dart';
@@ -60,7 +61,7 @@ class _PublishPageState extends State<PublishPage> {
   String _contentPath = '';
   String? _loadedTargetId; // 当前草稿归属的发布目标
   Timer? _debounce;
-  String _draftStamp = '编辑内容会自动保存为草稿 —— 上传失败也不会丢';
+  String? _draftStamp;
   StagePlan? _plan;
   final Set<String> _expandedDirs = {};
 
@@ -156,9 +157,11 @@ class _PublishPageState extends State<PublishPage> {
       } else if (d.description.isNotEmpty) {
         _descs['schinese'] = d.description;
       }
-      _draftStamp = '草稿已恢复(保存于 ${_fmtTime(d.savedAt)})';
+      _draftStamp = mounted
+          ? AppLocalizations.of(context).pubDraftRestored(_fmtTime(d.savedAt))
+          : null;
     } else {
-      _draftStamp = '编辑内容会自动保存为草稿 —— 上传失败也不会丢';
+      _draftStamp = null;
     }
     _titleCtrl.text = _titles[_curLang] ?? '';
     _descCtrl.text = _descs[_curLang] ?? '';
@@ -232,6 +235,7 @@ class _PublishPageState extends State<PublishPage> {
 
   List<Widget> _buildPlanRows(Mod mod, StagePlan plan) {
     final scheme = Theme.of(context).colorScheme;
+    final t = AppLocalizations.of(context);
     final rootFiles = <StagedEntry>[];
     final dirs = <String, List<StagedEntry>>{};
     for (final e in plan.entries) {
@@ -279,10 +283,12 @@ class _PublishPageState extends State<PublishPage> {
             ),
             Text(
               kept == 0
-                  ? '全部忽略'
+                  ? t.planAllIgnored
                   : kept == files.length
-                      ? '${files.length} 个文件 · ${humanSize(keptSize)}'
-                      : '$kept/${files.length} 个上传 · ${humanSize(keptSize)}',
+                      ? t.planFolderAll(
+                          '${files.length}', humanSize(keptSize))
+                      : t.planFolderPart('$kept', '${files.length}',
+                          humanSize(keptSize)),
               style: TextStyle(
                   fontSize: 10.5,
                   fontFamily: 'monospace',
@@ -290,7 +296,7 @@ class _PublishPageState extends State<PublishPage> {
             ),
             const SizedBox(width: 4),
             Tooltip(
-              message: kept > 0 ? '忽略整个文件夹' : '恢复整个文件夹',
+              message: kept > 0 ? t.planIgnoreFolder : t.planRestoreFolder,
               child: InkWell(
                 borderRadius: BorderRadius.circular(10),
                 onTap: () => _toggleFolder(mod, dir, kept > 0),
@@ -406,7 +412,8 @@ class _PublishPageState extends State<PublishPage> {
     );
     await DraftStore.save(path, _loadedTargetId, d);
     if (mounted) {
-      setState(() => _draftStamp = '已自动保存 ${_fmtTime(d.savedAt)}');
+      setState(() => _draftStamp =
+          AppLocalizations.of(context).pubDraftSaved(_fmtTime(d.savedAt)));
     }
   }
 
@@ -419,6 +426,7 @@ class _PublishPageState extends State<PublishPage> {
     final state = context.watch<AppState>();
     final scheme = Theme.of(context).colorScheme;
     final sem = SemanticColors.of(context);
+    final t = AppLocalizations.of(context);
     final mod = state.current;
     final targetId = state.publishTargetId;
     final target = targetId == null
@@ -430,7 +438,7 @@ class _PublishPageState extends State<PublishPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('先选择要上传的内容文件夹',
+            Text(t.pubPickFolderFirst,
                 style: TextStyle(color: scheme.onSurfaceVariant)),
             const SizedBox(height: 12),
             FilledButton.tonalIcon(
@@ -444,7 +452,7 @@ class _PublishPageState extends State<PublishPage> {
                 }
               },
               icon: const Icon(Icons.folder_open),
-              label: const Text('选择文件夹…'),
+              label: Text(t.pubPickFolderBtn),
             ),
           ],
         ),
@@ -466,7 +474,7 @@ class _PublishPageState extends State<PublishPage> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 18, 24, 32),
       children: [
-        Text('发布', style: Theme.of(context).textTheme.headlineSmall),
+        Text(t.pubTitle, style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 14),
         // 发布目标
         Card(
@@ -475,12 +483,12 @@ class _PublishPageState extends State<PublishPage> {
             child: Row(
               children: [
                 Tooltip(
-                  message: isNew ? '将新建一个工坊条目;要更新老模组,在列表里选中它' : '将更新选中的工坊条目',
+                  message: isNew ? t.targetTipNew : t.targetTipUpdate,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('发布目标',
-                          style: TextStyle(
+                      Text(t.targetTitle,
+                          style: const TextStyle(
                               fontSize: 13.5, fontWeight: FontWeight.w600)),
                       const SizedBox(width: 4),
                       Icon(Icons.info_outline,
@@ -509,8 +517,9 @@ class _PublishPageState extends State<PublishPage> {
                         Icon(Icons.add_circle_outline,
                             size: 18, color: scheme.primary),
                         const SizedBox(width: 8),
-                        const Text('新建工坊条目',
-                            style: TextStyle(fontWeight: FontWeight.w600)),
+                        Text(t.targetNew,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w600)),
                       ]),
                       for (final it in state.remoteItems)
                         Row(children: [
@@ -561,11 +570,11 @@ class _PublishPageState extends State<PublishPage> {
                                 mainAxisSize: MainAxisSize.min,
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('新建工坊条目',
-                                      style: TextStyle(
+                                  Text(t.targetNew,
+                                      style: const TextStyle(
                                           fontSize: 13.5,
                                           fontWeight: FontWeight.w600)),
-                                  Text('在创意工坊创建一个全新条目',
+                                  Text(t.targetNewSub,
                                       style: TextStyle(
                                           fontSize: 11,
                                           color: scheme.onSurfaceVariant)),
@@ -613,7 +622,11 @@ class _PublishPageState extends State<PublishPage> {
                                             fontSize: 13.5,
                                             fontWeight: FontWeight.w600)),
                                     Text(
-                                      'v${it.version.isEmpty ? '?' : it.version} · ${_fmtCount(it.subs)} 订阅',
+                                      t.targetItemSub(
+                                          it.version.isEmpty
+                                              ? '?'
+                                              : it.version,
+                                          _fmtCount(it.subs)),
                                       style: TextStyle(
                                           fontSize: 11,
                                           color: scheme.onSurfaceVariant),
@@ -641,12 +654,12 @@ class _PublishPageState extends State<PublishPage> {
               child: Row(
                 children: [
                   Tooltip(
-                    message: '未勾选的部分保持工坊现状不变;只改简介时取消勾选内容文件,几秒就能发完',
+                    message: t.partsTip,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text('本次更新',
-                            style: TextStyle(
+                        Text(t.partsTitle,
+                            style: const TextStyle(
                                 fontSize: 13.5, fontWeight: FontWeight.w600)),
                         const SizedBox(width: 4),
                         Icon(Icons.info_outline,
@@ -660,12 +673,14 @@ class _PublishPageState extends State<PublishPage> {
                       spacing: 6,
                       runSpacing: 4,
                       children: [
-                        for (final (k, label, icon) in const [
-                          ('content', '内容文件', Icons.folder_zip_outlined),
-                          ('text', '标题与简介', Icons.description_outlined),
-                          ('preview', '封面图', Icons.image_outlined),
-                          ('tags', '标签', Icons.sell_outlined),
-                          ('visibility', '可见性', Icons.visibility_outlined),
+                        for (final (k, label, icon) in [
+                          ('content', t.partContent,
+                              Icons.folder_zip_outlined),
+                          ('text', t.partText, Icons.description_outlined),
+                          ('preview', t.partPreview, Icons.image_outlined),
+                          ('tags', t.partTags, Icons.sell_outlined),
+                          ('visibility', t.partVisibility,
+                              Icons.visibility_outlined),
                         ])
                           FilterChip(
                             avatar: Icon(icon, size: 15),
@@ -699,9 +714,9 @@ class _PublishPageState extends State<PublishPage> {
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
             child: Row(
               children: [
-                const Text('内容文件夹',
-                    style:
-                        TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
+                Text(t.folderTitle,
+                    style: const TextStyle(
+                        fontSize: 13.5, fontWeight: FontWeight.w600)),
                 const SizedBox(width: 14),
                 Expanded(
                   child: InkWell(
@@ -761,7 +776,7 @@ class _PublishPageState extends State<PublishPage> {
                     }
                   },
                   icon: const Icon(Icons.folder_open, size: 18),
-                  label: const Text('其他文件夹…'),
+                  label: Text(t.otherFolderBtn),
                 ),
               ],
             ),
@@ -772,7 +787,7 @@ class _PublishPageState extends State<PublishPage> {
           child: Row(children: [
             Icon(Icons.save_outlined, size: 15, color: sem.success),
             const SizedBox(width: 6),
-            Text(_draftStamp,
+            Text(_draftStamp ?? t.pubDraftHint,
                 style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
           ]),
         ),
@@ -801,11 +816,12 @@ class _PublishPageState extends State<PublishPage> {
   Widget _buildForm(Mod mod, bool isNew, String wsVersion, bool verOk) {
     final scheme = Theme.of(context).colorScheme;
     final sem = SemanticColors.of(context);
+    final t = AppLocalizations.of(context);
     final bumpBase = wsVersion.isEmpty ? null : wsVersion;
     return Column(
       children: [
         SectionCard(
-          title: '版本',
+          title: t.verTitle,
           child: Row(
             children: [
               SizedBox(
@@ -824,18 +840,18 @@ class _PublishPageState extends State<PublishPage> {
                   _verCtrl.text = suggestBump(_verCtrl.text, bumpBase);
                   _onVersionChanged(_verCtrl.text);
                 },
-                child: Text('自增 → ${suggestBump(_verCtrl.text, bumpBase)}'),
+                child: Text(t.verBump(suggestBump(_verCtrl.text, bumpBase))),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   isNew
-                      ? '✓ 新建工坊条目'
+                      ? t.verNew
                       : wsVersion.isEmpty
-                          ? '⚠ 工坊版本未知(老条目无版本元数据)—— 请确认大于线上版本;本次发布后将自动记录'
+                          ? t.verUnknown
                           : verOk
-                              ? '✓ 大于工坊当前 $wsVersion'
-                              : '✕ 需大于工坊当前 $wsVersion(自增按两者较高版本计算)',
+                              ? t.verOkAbove(wsVersion)
+                              : t.verNeedAbove(wsVersion),
                   style: TextStyle(
                       fontSize: 12.5,
                       color: isNew
@@ -852,8 +868,8 @@ class _PublishPageState extends State<PublishPage> {
         ),
         const SizedBox(height: 14),
         SectionCard(
-          title: '工坊页面',
-          subtitle: '标题与简介按语言分开填,发布时各语言分别提交(留空的语言不提交)',
+          title: t.wsPageTitle,
+          subtitle: t.wsPageSubtitle,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -881,8 +897,8 @@ class _PublishPageState extends State<PublishPage> {
                 controller: _titleCtrl,
                 onChanged: (_) => _saveDraftSoon(),
                 decoration: InputDecoration(
-                  labelText: '标题 · ${kSteamLangs[_curLang]}',
-                  hintText: '工坊显示名(默认取 modinfo 的 name)',
+                  labelText: t.titleLabel(kSteamLangs[_curLang]!),
+                  hintText: t.titleHint,
                   border: const OutlineInputBorder(),
                 ),
               ),
@@ -890,16 +906,16 @@ class _PublishPageState extends State<PublishPage> {
               // 简介(BBCode,按语言)
               Row(
                 children: [
-                  Text('简介(BBCode)· ${kSteamLangs[_curLang]}',
+                  Text(t.descLabel(kSteamLangs[_curLang]!),
                       style: TextStyle(
                           fontSize: 12.5, color: scheme.onSurfaceVariant)),
                   const Spacer(),
                   SegmentedButton<bool>(
                     style:
                         const ButtonStyle(visualDensity: VisualDensity.compact),
-                    segments: const [
-                      ButtonSegment(value: false, label: Text('编写')),
-                      ButtonSegment(value: true, label: Text('预览')),
+                    segments: [
+                      ButtonSegment(value: false, label: Text(t.editTab)),
+                      ButtonSegment(value: true, label: Text(t.previewTab)),
                     ],
                     selected: {_descPreview},
                     onSelectionChanged: (s) =>
@@ -934,47 +950,50 @@ class _PublishPageState extends State<PublishPage> {
                             runSpacing: 2,
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
-                              _bbIcon(Icons.format_bold, '粗体', '[b]', '[/b]'),
-                              _bbIcon(Icons.format_italic, '斜体', '[i]', '[/i]'),
-                              _bbIcon(Icons.format_underlined, '下划线', '[u]',
-                                  '[/u]'),
-                              _bbIcon(Icons.strikethrough_s, '删除线', '[strike]',
-                                  '[/strike]'),
+                              _bbIcon(Icons.format_bold, t.bbBold, '[b]',
+                                  '[/b]'),
+                              _bbIcon(Icons.format_italic, t.bbItalic, '[i]',
+                                  '[/i]'),
+                              _bbIcon(Icons.format_underlined, t.bbUnderline,
+                                  '[u]', '[/u]'),
+                              _bbIcon(Icons.strikethrough_s, t.bbStrike,
+                                  '[strike]', '[/strike]'),
                               _bbDiv(),
-                              _bbTxt('H1', '大标题', '[h1]', '[/h1]'),
-                              _bbTxt('H2', '中标题', '[h2]', '[/h2]'),
-                              _bbTxt('H3', '小标题', '[h3]', '[/h3]'),
+                              _bbTxt('H1', t.bbH1, '[h1]', '[/h1]'),
+                              _bbTxt('H2', t.bbH2, '[h2]', '[/h2]'),
+                              _bbTxt('H3', t.bbH3, '[h3]', '[/h3]'),
                               _bbDiv(),
-                              _bbIcon(Icons.format_list_bulleted, '列表',
+                              _bbIcon(Icons.format_list_bulleted, t.bbList,
                                   '[list]\n[*]', '\n[/list]'),
-                              _bbIcon(Icons.format_list_numbered, '有序列表',
+                              _bbIcon(Icons.format_list_numbered, t.bbOlist,
                                   '[olist]\n[*]', '\n[/olist]'),
                               _bbDiv(),
-                              _bbIcon(
-                                  Icons.link, '链接', '[url=https://]', '[/url]'),
-                              _bbIcon(Icons.image_outlined, '图片', '[img]',
-                                  '[/img]'),
+                              _bbIcon(Icons.link, t.bbLink, '[url=https://]',
+                                  '[/url]'),
+                              _bbIcon(Icons.image_outlined, t.bbImage,
+                                  '[img]', '[/img]'),
                               _bbIcon(
                                   Icons.smart_display_outlined,
-                                  'YouTube 视频',
+                                  t.bbVideo,
                                   '[previewyoutube=',
                                   ';full][/previewyoutube]'),
                               _bbDiv(),
-                              _bbIcon(Icons.format_quote, '引用', '[quote=作者]',
-                                  '[/quote]'),
-                              _bbIcon(Icons.code, '代码块', '[code]', '[/code]'),
+                              _bbIcon(Icons.format_quote, t.bbQuote,
+                                  '[quote=${t.bbQuoteAuthor}]', '[/quote]'),
+                              _bbIcon(Icons.code, t.bbCode, '[code]',
+                                  '[/code]'),
                               _bbIcon(
                                   Icons.table_chart_outlined,
-                                  '表格',
-                                  '[table]\n[tr][th]表头[/th][th]表头[/th][/tr]\n'
-                                      '[tr][td]内容[/td][td]内容[/td][/tr]\n[/table]',
+                                  t.bbTable,
+                                  '[table]\n[tr][th]${t.bbTableHeader}[/th][th]${t.bbTableHeader}[/th][/tr]\n'
+                                      '[tr][td]${t.bbTableCell}[/td][td]${t.bbTableCell}[/td][/tr]\n[/table]',
                                   ''),
                               _bbDiv(),
-                              _bbIcon(Icons.visibility_off_outlined, '剧透(点击显示)',
-                                  '[spoiler]', '[/spoiler]'),
-                              _bbIcon(Icons.format_clear, '原文(不解析标签)',
+                              _bbIcon(Icons.visibility_off_outlined,
+                                  t.bbSpoiler, '[spoiler]', '[/spoiler]'),
+                              _bbIcon(Icons.format_clear, t.bbNoparse,
                                   '[noparse]', '[/noparse]'),
-                              _bbIcon(Icons.horizontal_rule, '分隔线',
+                              _bbIcon(Icons.horizontal_rule, t.bbHr,
                                   '[hr][/hr]\n', ''),
                             ],
                           ),
@@ -996,26 +1015,26 @@ class _PublishPageState extends State<PublishPage> {
         ),
         const SizedBox(height: 14),
         SectionCard(
-          title: '更新日志',
-          subtitle: '写入工坊更新记录,订阅者可见',
+          title: t.noteTitle,
+          subtitle: t.noteSubtitle,
           child: TextField(
             controller: _noteCtrl,
             onChanged: (_) => _saveDraftSoon(),
             maxLines: 4,
             style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
-            decoration: const InputDecoration(
-                border: OutlineInputBorder(), hintText: '这个版本改了什么…'),
+            decoration: InputDecoration(
+                border: const OutlineInputBorder(), hintText: t.noteHint),
           ),
         ),
         const SizedBox(height: 14),
         SectionCard(
-          title: '可见性',
+          title: t.visTitle,
           child: SegmentedButton<int>(
-            segments: const [
-              ButtonSegment(value: 0, label: Text('公开')),
-              ButtonSegment(value: 3, label: Text('不公开')),
-              ButtonSegment(value: 1, label: Text('好友')),
-              ButtonSegment(value: 2, label: Text('私密')),
+            segments: [
+              ButtonSegment(value: 0, label: Text(t.visPublic)),
+              ButtonSegment(value: 3, label: Text(t.visUnlisted)),
+              ButtonSegment(value: 1, label: Text(t.visFriends)),
+              ButtonSegment(value: 2, label: Text(t.visPrivate)),
             ],
             selected: {_visibility},
             onSelectionChanged: (s) {
@@ -1026,7 +1045,7 @@ class _PublishPageState extends State<PublishPage> {
         ),
         const SizedBox(height: 14),
         SectionCard(
-          title: '标签',
+          title: t.tagsTitle,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1047,10 +1066,10 @@ class _PublishPageState extends State<PublishPage> {
               const SizedBox(height: 8),
               TextField(
                 controller: _tagCtrl,
-                decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                    border: const OutlineInputBorder(),
                     isDense: true,
-                    hintText: '输入标签后回车'),
+                    hintText: t.tagsHint),
                 onSubmitted: (v) {
                   final t = v.trim();
                   if (t.isNotEmpty && !_tags.contains(t)) {
@@ -1068,8 +1087,9 @@ class _PublishPageState extends State<PublishPage> {
   }
 
   Future<void> _pickPreview(Mod mod) async {
-    const group =
-        XTypeGroup(label: '图片', extensions: ['jpg', 'jpeg', 'png', 'gif']);
+    final group = XTypeGroup(
+        label: AppLocalizations.of(context).imgGroupLabel,
+        extensions: const ['jpg', 'jpeg', 'png', 'gif']);
     final f = await openFile(acceptedTypeGroups: [group]);
     if (f == null) return;
     final ext = p.extension(f.path).toLowerCase();
@@ -1094,7 +1114,7 @@ class _PublishPageState extends State<PublishPage> {
     await FileImage(target).evict();
     if (mounted) {
       setState(() {});
-      toast(context, '预览图已更新为 $name');
+      toast(context, AppLocalizations.of(context).previewUpdated(name));
     }
   }
 
@@ -1158,16 +1178,17 @@ class _PublishPageState extends State<PublishPage> {
     final state = context.watch<AppState>();
     final scheme = Theme.of(context).colorScheme;
     final sem = SemanticColors.of(context);
+    final t = AppLocalizations.of(context);
     final plan = _plan;
 
     return Column(
       children: [
         SectionCard(
-          title: '预览图',
-          subtitle: 'JPG/PNG/GIF · 小于 1 MB',
+          title: t.previewTitle,
+          subtitle: t.previewSubtitle,
           trailing: TextButton(
             onPressed: () => _pickPreview(mod),
-            child: const Text('更换…'),
+            child: Text(t.previewChange),
           ),
           child: Builder(builder: (context) {
             final pv = mod.preview;
@@ -1203,7 +1224,7 @@ class _PublishPageState extends State<PublishPage> {
                         errorBuilder: (_, __, ___) =>
                             placeholder(Icons.cloud_off_outlined))
                     : placeholder(Icons.cloud_outlined),
-                '工坊当前',
+                t.previewRemote,
               ));
               slots.add(Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -1214,13 +1235,14 @@ class _PublishPageState extends State<PublishPage> {
 
             if (pv == null) {
               slots.add(slot(
-                  placeholder(Icons.image_not_supported_outlined), '本地(缺失)'));
+                  placeholder(Icons.image_not_supported_outlined),
+                  t.previewLocalMissing));
               return Row(children: [
                 ...slots,
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    '未找到本地预览图 —— 放一张 preview.jpg 进模组文件夹,或点右上「更换…」',
+                    t.previewNotFound,
                     style: TextStyle(
                         fontSize: 12.5, color: scheme.onSurfaceVariant),
                   ),
@@ -1241,7 +1263,7 @@ class _PublishPageState extends State<PublishPage> {
                 errorBuilder: (_, __, ___) =>
                     placeholder(Icons.broken_image_outlined),
               ),
-              '本地(将上传)',
+              t.previewLocalUpload,
             ));
 
             return Row(
@@ -1262,7 +1284,7 @@ class _PublishPageState extends State<PublishPage> {
                               color: scheme.onSurfaceVariant)),
                       const SizedBox(height: 2),
                       Text(
-                        okSize ? '✓ 小于 1 MB 上限' : '✗ 超过 1 MB,Steam 会拒收',
+                        okSize ? t.previewSizeOk : t.previewSizeBad,
                         style: TextStyle(
                             fontSize: 12,
                             color: okSize ? sem.success : scheme.error),
@@ -1276,10 +1298,10 @@ class _PublishPageState extends State<PublishPage> {
         ),
         const SizedBox(height: 14),
         SectionCard(
-          title: '将要上传',
-          subtitle: '点击文件可切换上传/忽略,选择存入 dstpub.json',
+          title: t.uploadTitle,
+          subtitle: t.uploadSubtitle,
           trailing: IconButton(
-            tooltip: '重新扫描',
+            tooltip: t.rescan,
             icon: const Icon(Icons.refresh, size: 18),
             onPressed: () => _refreshPlan(mod),
           ),
@@ -1310,9 +1332,11 @@ class _PublishPageState extends State<PublishPage> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      '${humanSize(plan.totalSize)} · ${plan.kept.length} 项'
-                      ' · 忽略 ${plan.dropped.length} 项'
-                      '${plan.overLimit ? ' · 体积较大,上传耗时较长' : ''}',
+                      t.uploadSummary(
+                          humanSize(plan.totalSize),
+                          '${plan.kept.length}',
+                          '${plan.dropped.length}',
+                          plan.overLimit ? t.uploadSummaryBig : ''),
                       style: TextStyle(
                           fontSize: 12,
                           color: plan.overLimit
@@ -1329,7 +1353,7 @@ class _PublishPageState extends State<PublishPage> {
         ),
         const SizedBox(height: 14),
         SectionCard(
-          title: '发布',
+          title: t.publishCard,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -1344,7 +1368,7 @@ class _PublishPageState extends State<PublishPage> {
                         final langs = _collectLangs();
                         if ((isNew || _parts.contains('text')) &&
                             (langs.isEmpty || langs.first.title.isEmpty)) {
-                          toast(context, '至少给主语言填一个标题');
+                          toast(context, t.needTitleToast);
                           return;
                         }
                         final ok = await state.publish(
@@ -1360,23 +1384,26 @@ class _PublishPageState extends State<PublishPage> {
                         if (ok) {
                           await DraftStore.clear(mod.path, targetId);
                           if (mounted) {
-                            setState(() => _draftStamp = '已发布 · 草稿已清除');
-                            toast(context,
-                                '已发布 ${mod.info.name} v${_verCtrl.text}');
+                            setState(() =>
+                                _draftStamp = t.pubDraftCleared);
+                            toast(
+                                context,
+                                t.publishedToast(
+                                    mod.info.name, _verCtrl.text));
                           }
                         }
                       },
                 icon: const Icon(Icons.upload),
                 label: Text(state.busy
-                    ? '发布中…'
+                    ? t.publishing
                     : isNew
-                        ? '发布(新建条目)'
-                        : '更新到创意工坊'),
+                        ? t.publishNew
+                        : t.publishUpdate),
               ),
               const SizedBox(height: 8),
               FilledButton.tonal(
                 onPressed: state.busy ? null : () => state.dryRun(mod),
-                child: const Text('Dry-run:只演练,不上传'),
+                child: Text(t.dryRunBtn),
               ),
               if (state.busy && state.progress != null) ...[
                 const SizedBox(height: 12),
@@ -1394,8 +1421,7 @@ class _PublishPageState extends State<PublishPage> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
-                    '上传失败:${state.failNote}\n'
-                    '所有编辑内容与草稿完好,修复后直接重试。',
+                    t.failNote(state.failNote ?? ''),
                     style: TextStyle(
                         fontSize: 12.5, color: scheme.onErrorContainer),
                   ),
@@ -1410,7 +1436,7 @@ class _PublishPageState extends State<PublishPage> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  '等效命令行:\ndstpub upload ./${mod.folderName} '
+                  '${t.cliEquiv}\ndstpub upload ./${mod.folderName} '
                   '--set-version ${_verCtrl.text} --yes',
                   style: TextStyle(
                       fontSize: 11,
@@ -1449,18 +1475,18 @@ class _FolderPickDialogState extends State<_FolderPickDialog> {
             m.info.name.toLowerCase().contains(q))
         .toList();
     return AlertDialog(
-      title: const Text('选择内容文件夹'),
+      title: Text(AppLocalizations.of(context).pickDialogTitle),
       content: SizedBox(
         width: 460,
         height: 440,
         child: Column(children: [
           TextField(
             autofocus: true,
-            decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.search, size: 18),
-              hintText: '输入文件夹名或模组名过滤',
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.search, size: 18),
+              hintText: AppLocalizations.of(context).pickDialogHint,
               isDense: true,
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
             ),
             onChanged: (v) => setState(() => _q = v.trim()),
           ),
@@ -1468,7 +1494,7 @@ class _FolderPickDialogState extends State<_FolderPickDialog> {
           Expanded(
             child: list.isEmpty
                 ? Center(
-                    child: Text('没有匹配的文件夹',
+                    child: Text(AppLocalizations.of(context).pickNoMatch,
                         style: TextStyle(color: scheme.onSurfaceVariant)))
                 : ListView.builder(
                     itemCount: list.length,
@@ -1513,7 +1539,7 @@ class _FolderPickDialogState extends State<_FolderPickDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
+          child: Text(AppLocalizations.of(context).cancel),
         ),
       ],
     );

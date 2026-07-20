@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../l10n/gen/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 import '../../services/workshop_api.dart';
@@ -67,9 +69,9 @@ class _WorkshopPageState extends State<WorkshopPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('工坊条目',
+                  Text(AppLocalizations.of(context).wpTitle,
                       style: Theme.of(context).textTheme.headlineSmall),
-                  Text('你账号名下的全部模组 —— 点「更新」选内容文件夹即可发布,无需预先绑定',
+                  Text(AppLocalizations.of(context).wpSubtitle,
                       style: TextStyle(
                           fontSize: 13, color: scheme.onSurfaceVariant)),
                 ],
@@ -78,15 +80,15 @@ class _WorkshopPageState extends State<WorkshopPage> {
             FilledButton.tonalIcon(
               onPressed: state.refreshRemote,
               icon: const Icon(Icons.refresh, size: 18),
-              label: const Text('从 Steam 拉取'),
+              label: Text(AppLocalizations.of(context).wpFetch),
             ),
           ],
         ),
         const SizedBox(height: 16),
         SectionCard(
-          title: '账号名下条目',
+          title: AppLocalizations.of(context).wpCardTitle,
           child: state.remoteItems.isEmpty
-              ? Text('尚未拉取,或未配置 API Key',
+              ? Text(AppLocalizations.of(context).wpEmpty,
                   style: TextStyle(color: scheme.onSurfaceVariant))
               : Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -97,7 +99,8 @@ class _WorkshopPageState extends State<WorkshopPage> {
                         runSpacing: 7,
                         children: [
                           FilterChip(
-                            label: Text('全部 (${state.remoteItems.length})'),
+                            label: Text(AppLocalizations.of(context)
+                                .wpAllTags('${state.remoteItems.length}')),
                             selected: _tagFilter.isEmpty,
                             onSelected: (_) =>
                                 setState(() => _tagFilter.clear()),
@@ -124,8 +127,9 @@ class _WorkshopPageState extends State<WorkshopPage> {
                           if (sortedTags.length > 8)
                             ActionChip(
                               label: Text(_tagsExpanded
-                                  ? '收起'
-                                  : '+${sortedTags.length - 8} 更多'),
+                                  ? AppLocalizations.of(context).wpCollapse
+                                  : AppLocalizations.of(context)
+                                      .wpMore('${sortedTags.length - 8}')),
                               onPressed: () => setState(
                                   () => _tagsExpanded = !_tagsExpanded),
                             ),
@@ -205,7 +209,7 @@ extension on _WorkshopPageState {
           ),
           const SizedBox(width: 10),
           Tooltip(
-            message: '订阅数',
+            message: AppLocalizations.of(context).wpSubs,
             child: Row(children: [
               Icon(Icons.people_alt_outlined,
                   size: 15, color: scheme.onSurfaceVariant),
@@ -216,7 +220,7 @@ extension on _WorkshopPageState {
           if (it.updated != null) ...[
             const SizedBox(width: 14),
             Tooltip(
-              message: '最近更新',
+              message: AppLocalizations.of(context).wpUpdated,
               child: Row(children: [
                 Icon(Icons.schedule, size: 15, color: scheme.onSurfaceVariant),
                 const SizedBox(width: 3),
@@ -231,7 +235,7 @@ extension on _WorkshopPageState {
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 visualDensity: VisualDensity.compact),
             onPressed: () => _updateItem(state, it),
-            child: const Text('更新'),
+            child: Text(AppLocalizations.of(context).wpUpdate),
           ),
         ],
       ),

@@ -295,7 +295,9 @@ class _PathRow extends StatelessWidget {
             ],
           ),
         ),
-        TextButton(onPressed: onPick, child: const Text('选择…')),
+        TextButton(
+            onPressed: onPick,
+            child: Text(AppLocalizations.of(context).setPick)),
       ],
     );
   }
@@ -352,7 +354,7 @@ class _TextRowState extends State<_TextRow> {
         ),
         TextButton(
           onPressed: () => widget.onSave(_ctrl.text.trim()),
-          child: const Text('保存'),
+          child: Text(AppLocalizations.of(context).setSave),
         ),
       ],
     );
