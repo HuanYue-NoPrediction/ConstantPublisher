@@ -40,6 +40,19 @@ class AppState extends ChangeNotifier {
   String steamId64 = '';
   String seed = 'purple';
   ThemeMode themeMode = ThemeMode.dark; // 与首帧一致,防启动白闪
+  String localePref = 'system';
+
+  Locale? get appLocale => switch (localePref) {
+        'zh' => const Locale('zh'),
+        'en' => const Locale('en'),
+        _ => null,
+      };
+
+  Future<void> setLocalePref(String v) async {
+    localePref = v;
+    await _persist('localePref', v);
+    notifyListeners();
+  }
 
   // ---------- 数据 ----------
   List<Mod> mods = [];
@@ -64,6 +77,7 @@ class AppState extends ChangeNotifier {
     webApiKey = sp.getString('webApiKey') ?? '';
     steamId64 = sp.getString('steamId64') ?? '';
     seed = sp.getString('seed') ?? 'purple';
+    localePref = sp.getString('localePref') ?? 'system';
     // 首次启动(未存过偏好)默认深色
     themeMode = ThemeMode.values[sp.getInt('themeMode') ?? ThemeMode.dark.index];
     notifyListeners();

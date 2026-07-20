@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../l10n/gen/app_localizations.dart';
 import '../state/app_state.dart';
 import 'pages/dashboard_page.dart';
 import 'pages/logs_page.dart';
@@ -16,6 +17,7 @@ class Shell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
+    final t = AppLocalizations.of(context);
     const pages = [
       DashboardPage(),
       WorkshopPage(),
@@ -35,27 +37,27 @@ class Shell extends StatelessWidget {
                   selectedIndex: state.navIndex,
                   onDestinationSelected: state.goto,
                   labelType: NavigationRailLabelType.all,
-                  destinations: const [
+                  destinations: [
                     NavigationRailDestination(
-                        icon: Icon(Icons.dashboard_outlined),
-                        selectedIcon: Icon(Icons.dashboard),
-                        label: Text('仪表盘')),
+                        icon: const Icon(Icons.dashboard_outlined),
+                        selectedIcon: const Icon(Icons.dashboard),
+                        label: Text(t.navDashboard)),
                     NavigationRailDestination(
-                        icon: Icon(Icons.public_outlined),
-                        selectedIcon: Icon(Icons.public),
-                        label: Text('工坊')),
+                        icon: const Icon(Icons.public_outlined),
+                        selectedIcon: const Icon(Icons.public),
+                        label: Text(t.navWorkshop)),
                     NavigationRailDestination(
-                        icon: Icon(Icons.upload_outlined),
-                        selectedIcon: Icon(Icons.upload),
-                        label: Text('发布')),
+                        icon: const Icon(Icons.upload_outlined),
+                        selectedIcon: const Icon(Icons.upload),
+                        label: Text(t.navPublish)),
                     NavigationRailDestination(
-                        icon: Icon(Icons.terminal_outlined),
-                        selectedIcon: Icon(Icons.terminal),
-                        label: Text('日志')),
+                        icon: const Icon(Icons.terminal_outlined),
+                        selectedIcon: const Icon(Icons.terminal),
+                        label: Text(t.navLogs)),
                     NavigationRailDestination(
-                        icon: Icon(Icons.tune_outlined),
-                        selectedIcon: Icon(Icons.tune),
-                        label: Text('设置')),
+                        icon: const Icon(Icons.tune_outlined),
+                        selectedIcon: const Icon(Icons.tune),
+                        label: Text(t.navSettings)),
                   ],
                 ),
                 const VerticalDivider(width: 1, thickness: 1),
@@ -91,13 +93,13 @@ class _TitleBar extends StatelessWidget {
           const Text('DST Mod Publisher',
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           const SizedBox(width: 8),
-          Text('饥荒模组发布器',
+          Text(AppLocalizations.of(context).appSubtitle,
               style:
                   TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
           // 拖拽区
           const Expanded(child: DragToMoveArea(child: SizedBox.expand())),
           IconButton(
-            tooltip: '切换明暗主题',
+            tooltip: AppLocalizations.of(context).tooltipToggleTheme,
             iconSize: 17,
             onPressed: () {
               final dark = Theme.of(context).brightness == Brightness.dark;

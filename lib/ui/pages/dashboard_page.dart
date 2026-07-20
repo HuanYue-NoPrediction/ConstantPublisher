@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/gen/app_localizations.dart';
 import '../../services/workshop_api.dart';
 import '../../state/app_state.dart';
 import '../../theme.dart';
@@ -40,19 +41,20 @@ class _DashboardPageState extends State<DashboardPage> {
     final state = context.watch<AppState>();
     final scheme = Theme.of(context).colorScheme;
     final sem = SemanticColors.of(context);
+    final t = AppLocalizations.of(context);
     final items = state.remoteItems;
     final top = [...items]..sort((a, b) => b.subs.compareTo(a.subs));
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 18, 24, 32),
       children: [
-        Text('仪表盘', style: Theme.of(context).textTheme.headlineSmall),
+        Text(t.dashTitle, style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 18),
         if (state.update != null) ...[
           SectionCard(
-            title: '发现新版本 v${state.update!.version}',
+            title: t.updateFoundTitle(state.update!.version),
             subtitle:
-                '来源:${state.update!.source} · 当前 v$kAppVersion · 更新完成后自动重启',
+                t.updateFoundSubtitle(state.update!.source, kAppVersion),
             trailing: Icon(Icons.system_update, color: scheme.primary),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -61,12 +63,12 @@ class _DashboardPageState extends State<DashboardPage> {
                   FilledButton.icon(
                     onPressed: state.busy ? null : state.startUpdate,
                     icon: const Icon(Icons.download),
-                    label: const Text('立即更新'),
+                    label: Text(t.updateNow),
                   ),
                   const SizedBox(width: 10),
                   TextButton(
                     onPressed: state.dismissUpdate,
-                    child: const Text('本次忽略'),
+                    child: Text(t.updateDismiss),
                   ),
                 ]),
                 if (state.updateStage != null) ...[
@@ -84,14 +86,12 @@ class _DashboardPageState extends State<DashboardPage> {
 
         // 环境状态
         SectionCard(
-          title: state.steamReady ? '发布环境就绪' : '发布环境未配置',
+          title: state.steamReady ? t.envReady : t.envNotReady,
           subtitle: state.engine == 'steamworks'
-              ? (state.steamReady
-                  ? 'Steamworks 引擎 · 开着 Steam 即可发布'
-                  : '未找到 Steamworks 助手 —— 请使用完整发行包,或到设置页切换引擎')
+              ? (state.steamReady ? t.envSwOk : t.envSwMissing)
               : (state.steamReady
-                  ? '${state.steamUser} · steamcmd 已配置'
-                  : '到设置页配置 steamcmd 路径与 Steam 账号'),
+                  ? t.envCmdOk(state.steamUser)
+                  : t.envCmdNeed),
           trailing: Icon(
             state.steamReady ? Icons.check_circle : Icons.error_outline,
             color: state.steamReady ? sem.success : scheme.error,
@@ -101,7 +101,7 @@ class _DashboardPageState extends State<DashboardPage> {
               FilledButton.tonalIcon(
                 onPressed: () => state.goto(AppState.publishPageIndex),
                 icon: const Icon(Icons.upload),
-                label: const Text('去发布'),
+                label: Text(t.goPublish),
               ),
               const SizedBox(width: 10),
               OutlinedButton.icon(
@@ -110,7 +110,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   if (state.news.isEmpty) state.fetchNews();
                 },
                 icon: const Icon(Icons.refresh),
-                label: const Text('刷新数据'),
+                label: Text(t.refreshData),
               ),
             ],
           ),
@@ -119,10 +119,10 @@ class _DashboardPageState extends State<DashboardPage> {
 
         // 公告栏:饥荒官方动态(游戏更新往往意味着模组要适配)
         SectionCard(
-          title: '公告栏 · 饥荒官方动态',
-          subtitle: '游戏更新可能影响模组兼容;点击在 Steam 中查看',
+          title: t.newsTitle,
+          subtitle: t.newsSubtitle,
           child: state.news.isEmpty
-              ? Text('动态加载中…(拉取不到时检查网络)',
+              ? Text(t.newsLoading,
                   style: TextStyle(
                       fontSize: 12.5, color: scheme.onSurfaceVariant))
               : Column(
@@ -146,7 +146,7 @@ class _DashboardPageState extends State<DashboardPage> {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            Text(_ago(n.date),
+                            Text(_ago(t, n.date),
                                 style: TextStyle(
                                     fontSize: 11,
                                     color: scheme.onSurfaceVariant)),
@@ -159,8 +159,8 @@ class _DashboardPageState extends State<DashboardPage> {
         const SizedBox(height: 14),
 
         SectionCard(
-          title: '交流群',
-          subtitle: '欢迎大家加入 modder 交流群!为 DST 社区添砖加瓦',
+          title: t.groupsTitle,
+          subtitle: t.groupsSubtitle,
           child: Wrap(
             spacing: 12,
             runSpacing: 10,
@@ -170,7 +170,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   borderRadius: BorderRadius.circular(10),
                   onTap: () {
                     Clipboard.setData(ClipboardData(text: num));
-                    toast(context, '群号已复制:$num');
+                    toast(context, t.groupCopied(num));
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(
@@ -204,7 +204,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                     fontSize: 13.5,
                                     fontWeight: FontWeight.w600)),
                             const SizedBox(height: 2),
-                            Text('群号 $num · 点击复制',
+                            Text(t.groupNumberHint(num),
                                 style: TextStyle(
                                     fontSize: 11.5,
                                     color: scheme.onSurfaceVariant)),
@@ -221,30 +221,28 @@ class _DashboardPageState extends State<DashboardPage> {
 
         if (items.isEmpty)
           SectionCard(
-            title: '模组排行',
+            title: t.rankTitle,
             child: Text(
-              state.steamReady
-                  ? '点上方「刷新数据」拉取名下工坊条目'
-                  : '连接 Steam 后即可查看名下模组数据',
+              state.steamReady ? t.rankHintReady : t.rankHintNoSteam,
               style: TextStyle(color: scheme.onSurfaceVariant),
             ),
           )
         else
           SectionCard(
-            title: '模组排行',
-            subtitle: '按订阅数,共 ${items.length} 个',
+            title: t.rankTitle,
+            subtitle: t.rankSubtitle('${items.length}'),
             trailing: SizedBox(
               width: 220,
               child: TextField(
                 onChanged: (v) =>
                     setState(() => _rankQ = v.trim().toLowerCase()),
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.search, size: 17),
-                  hintText: '搜索模组…',
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.search, size: 17),
+                  hintText: t.rankSearchHint,
                   isDense: true,
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                   contentPadding:
-                      EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 ),
                 style: const TextStyle(fontSize: 13),
               ),
@@ -257,7 +255,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     it,
               ];
               if (filtered.isEmpty) {
-                return Text('没有匹配的模组',
+                return Text(t.rankNoMatch,
                     style: TextStyle(color: scheme.onSurfaceVariant));
               }
               return Column(
@@ -272,7 +270,7 @@ class _DashboardPageState extends State<DashboardPage> {
         if (state.busy && state.progress != null) ...[
           const SizedBox(height: 14),
           SectionCard(
-            title: '发布进行中',
+            title: t.publishingTitle,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -295,14 +293,14 @@ String _fmt(int n) {
   return '$n';
 }
 
-String _ago(DateTime t) {
-  final d = DateTime.now().difference(t);
+String _ago(AppLocalizations t, DateTime time) {
+  final d = DateTime.now().difference(time);
   if (d.inDays >= 30) {
-    return '${t.year}-${t.month.toString().padLeft(2, '0')}-${t.day.toString().padLeft(2, '0')}';
+    return '${time.year}-${time.month.toString().padLeft(2, '0')}-${time.day.toString().padLeft(2, '0')}';
   }
-  if (d.inDays >= 1) return '${d.inDays} 天前';
-  if (d.inHours >= 1) return '${d.inHours} 小时前';
-  return '刚刚';
+  if (d.inDays >= 1) return t.agoDays('${d.inDays}');
+  if (d.inHours >= 1) return t.agoHours('${d.inHours}');
+  return t.agoJustNow;
 }
 
 class _RankRow extends StatelessWidget {
@@ -359,7 +357,7 @@ class _RankRow extends StatelessWidget {
                 dim),
           const SizedBox(width: 4),
           IconButton(
-            tooltip: '在工坊查看评论',
+            tooltip: AppLocalizations.of(context).tooltipComments,
             visualDensity: VisualDensity.compact,
             icon: const Icon(Icons.open_in_new, size: 16),
             onPressed: () => openSteamPage(

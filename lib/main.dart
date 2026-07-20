@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'l10n/gen/app_localizations.dart';
 import 'state/app_state.dart';
 import 'theme.dart';
 import 'ui/shell.dart';
@@ -45,6 +46,9 @@ class App extends StatelessWidget {
       theme: buildTheme(state.seed, Brightness.light),
       darkTheme: buildTheme(state.seed, Brightness.dark),
       themeMode: state.themeMode,
+      locale: state.appLocale,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
       home: const Shell(),
     );
   }

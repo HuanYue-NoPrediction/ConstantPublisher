@@ -19,3 +19,5 @@ helper_out/
 helper/bin/
 helper/obj/
 _sdk_tmp/
+lib/l10n/gen/
+l10n_untranslated.json

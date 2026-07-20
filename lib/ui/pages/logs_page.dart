@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/gen/app_localizations.dart';
 import '../../state/app_state.dart';
 import '../../theme.dart';
 
@@ -19,6 +20,7 @@ class _LogsPageState extends State<LogsPage> {
     final state = context.watch<AppState>();
     final scheme = Theme.of(context).colorScheme;
     final sem = SemanticColors.of(context);
+    final t = AppLocalizations.of(context);
     final items = _filter == null
         ? state.logs
         : state.logs.where((l) => l.level == _filter).toList();
@@ -31,18 +33,19 @@ class _LogsPageState extends State<LogsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('日志', style: Theme.of(context).textTheme.headlineSmall),
-              Text('发布过程与 steamcmd 输出 · EResult 自动翻译',
+              Text(t.logsTitle,
+                  style: Theme.of(context).textTheme.headlineSmall),
+              Text(t.logsSubtitle,
                   style: TextStyle(
                       fontSize: 13, color: scheme.onSurfaceVariant)),
               const SizedBox(height: 12),
               Row(
                 children: [
                   for (final (label, lv) in [
-                    ('全部', null),
-                    ('信息', LogLevel.info),
-                    ('警告', LogLevel.warn),
-                    ('错误', LogLevel.error),
+                    (t.logsAll, null),
+                    (t.logsInfo, LogLevel.info),
+                    (t.logsWarn, LogLevel.warn),
+                    (t.logsError, LogLevel.error),
                   ])
                     Padding(
                       padding: const EdgeInsets.only(right: 8),
@@ -55,7 +58,7 @@ class _LogsPageState extends State<LogsPage> {
                   const Spacer(),
                   TextButton(
                     onPressed: state.clearLogs,
-                    child: const Text('清空'),
+                    child: Text(t.logsClear),
                   ),
                 ],
               ),

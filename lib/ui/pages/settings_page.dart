@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../l10n/gen/app_localizations.dart';
 import '../../state/app_state.dart';
 import '../../theme.dart';
 import '../../version.dart';
@@ -15,25 +16,27 @@ class SettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final scheme = Theme.of(context).colorScheme;
+    final t = AppLocalizations.of(context);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 18, 24, 32),
       children: [
-        Text('设置', style: Theme.of(context).textTheme.headlineSmall),
-        Text('环境、外观与默认行为',
+        Text(t.setTitle, style: Theme.of(context).textTheme.headlineSmall),
+        Text(t.setSubtitle,
             style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant)),
         const SizedBox(height: 18),
         SectionCard(
-          title: '发布引擎',
-          subtitle: '默认 Steamworks:开着 Steam 即可,免账号免密码(与官方工具同机制);steamcmd 供 CI / 无桌面 Steam 环境',
+          title: t.setEngineTitle,
+          subtitle: t.setEngineSubtitle,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SegmentedButton<String>(
-                segments: const [
+                segments: [
                   ButtonSegment(
-                      value: 'steamworks', label: Text('Steamworks(推荐)')),
-                  ButtonSegment(value: 'steamcmd', label: Text('steamcmd')),
+                      value: 'steamworks', label: Text(t.setEngineSw)),
+                  const ButtonSegment(
+                      value: 'steamcmd', label: Text('steamcmd')),
                 ],
                 selected: {state.engine},
                 onSelectionChanged: (s) => state.setEngine(s.first),
@@ -41,12 +44,8 @@ class SettingsPage extends StatelessWidget {
               const SizedBox(height: 10),
               Text(
                 state.engine == 'steamworks'
-                    ? (state.steamReady
-                        ? '✓ 助手已就绪 —— Steam 客户端开着就能发布,身份来自 Steam 本身'
-                        : '✗ 未找到 helper\\CpSteamHelper.exe —— 请使用完整发行包(开发模式需先构建 helper)')
-                    : (state.steamReady
-                        ? '✓ steamcmd 已配置'
-                        : '✗ 需要配置下方 steamcmd 路径与账号'),
+                    ? (state.steamReady ? t.setSwReady : t.setSwMissing)
+                    : (state.steamReady ? t.setCmdReady : t.setCmdNeed),
                 style: TextStyle(
                     fontSize: 12.5,
                     color: Theme.of(context).colorScheme.onSurfaceVariant),
@@ -56,10 +55,10 @@ class SettingsPage extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         SectionCard(
-          title: '通用',
+          title: t.setGeneral,
           child: _PathRow(
-            label: 'mods 目录',
-            value: state.modsDir.isEmpty ? '未设置' : state.modsDir,
+            label: t.setModsDir,
+            value: state.modsDir.isEmpty ? t.setNotSet : state.modsDir,
             onPick: () async {
               final dir = await getDirectoryPath();
               if (dir != null) await state.setModsDir(dir);
@@ -68,13 +67,13 @@ class SettingsPage extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         SectionCard(
-          title: 'steamcmd(高级 · 仅 steamcmd 引擎需要)',
+          title: t.setCmdCard,
           child: Column(
             children: [
               _PathRow(
-                label: 'steamcmd 路径',
+                label: t.setCmdPath,
                 value: state.steamcmdPath.isEmpty
-                    ? '未设置 —— 从 https://developer.valvesoftware.com/wiki/SteamCMD 下载'
+                    ? t.setCmdPathHint
                     : state.steamcmdPath,
                 onPick: () async {
                   const group = XTypeGroup(label: 'steamcmd', extensions: ['exe']);
@@ -84,8 +83,8 @@ class SettingsPage extends StatelessWidget {
               ),
               const Divider(height: 20),
               _TextRow(
-                label: 'Steam 账号',
-                hint: '首次需在终端运行 steamcmd +login <账号> 过一次 Steam Guard',
+                label: t.setSteamUser,
+                hint: t.setSteamUserHint,
                 value: state.steamUser,
                 onSave: state.setSteamUser,
               ),
@@ -94,14 +93,13 @@ class SettingsPage extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         SectionCard(
-          title: '工坊巡检(可选)',
-          subtitle:
-              '用 Steam Web API 拉取账号名下条目;不配置也不影响发布(真相源是本地 dstpub.json)',
+          title: t.setInspect,
+          subtitle: t.setInspectSubtitle,
           child: Column(
             children: [
               _TextRow(
                 label: 'Web API Key',
-                hint: 'steamcommunity.com/dev/apikey 申请',
+                hint: t.setApiKeyHint,
                 value: state.webApiKey,
                 obscure: true,
                 onSave: (v) => state.setWebApi(v, state.steamId64),
@@ -109,7 +107,7 @@ class SettingsPage extends StatelessWidget {
               const Divider(height: 20),
               _TextRow(
                 label: 'SteamID64',
-                hint: '17 位数字,steamid.io 可查',
+                hint: t.setSteamIdHint,
                 value: state.steamId64,
                 onSave: (v) => state.setWebApi(state.webApiKey, v),
               ),
@@ -118,17 +116,17 @@ class SettingsPage extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         SectionCard(
-          title: '外观',
+          title: t.setAppearance,
           child: Column(
             children: [
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(
+                  SizedBox(
                       width: 130,
                       child: Padding(
-                          padding: EdgeInsets.only(top: 6),
-                          child: Text('主题色'))),
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(t.setSeedColor))),
                   Expanded(
                     child: Wrap(
                       spacing: 12,
@@ -168,18 +166,35 @@ class SettingsPage extends StatelessWidget {
               const Divider(height: 24),
               Row(
                 children: [
-                  const Expanded(child: Text('深色模式')),
+                  Expanded(child: Text(t.setDarkMode)),
                   SegmentedButton<ThemeMode>(
-                    segments: const [
+                    segments: [
                       ButtonSegment(
-                          value: ThemeMode.system, label: Text('跟随系统')),
+                          value: ThemeMode.system,
+                          label: Text(t.setFollowSystem)),
                       ButtonSegment(
-                          value: ThemeMode.light, label: Text('浅色')),
+                          value: ThemeMode.light, label: Text(t.setLight)),
                       ButtonSegment(
-                          value: ThemeMode.dark, label: Text('深色')),
+                          value: ThemeMode.dark, label: Text(t.setDark)),
                     ],
                     selected: {state.themeMode},
                     onSelectionChanged: (s) => state.setThemeMode(s.first),
+                  ),
+                ],
+              ),
+              const Divider(height: 24),
+              Row(
+                children: [
+                  Expanded(child: Text(t.setLanguage)),
+                  SegmentedButton<String>(
+                    segments: [
+                      ButtonSegment(
+                          value: 'system', label: Text(t.setLangSystem)),
+                      ButtonSegment(value: 'zh', label: Text(t.setLangZh)),
+                      ButtonSegment(value: 'en', label: Text(t.setLangEn)),
+                    ],
+                    selected: {state.localePref},
+                    onSelectionChanged: (s) => state.setLocalePref(s.first),
                   ),
                 ],
               ),
@@ -188,19 +203,20 @@ class SettingsPage extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         SectionCard(
-          title: '关于',
+          title: t.setAbout,
           trailing: TextButton(
             onPressed: () async {
               await state.checkUpdates(manual: true);
               if (context.mounted) {
+                final tt = AppLocalizations.of(context);
                 toast(
                     context,
                     state.update == null
-                        ? '已是最新版本 v$kAppVersion'
-                        : '发现新版本 v${state.update!.version},到仪表盘更新');
+                        ? tt.setLatestToast(kAppVersion)
+                        : tt.setFoundToast(state.update!.version));
               }
             },
-            child: const Text('检查更新'),
+            child: Text(t.setCheckUpdate),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -209,9 +225,7 @@ class SettingsPage extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 4),
               Text(
-                '作者 唤月(HuanYue)· 1713597367@qq.com\n'
-                '开源(GPL-3.0)· 界面布局致敬 FlClash 的 Material You 设计,代码全部原创\n'
-                '非 Klei / Valve 官方软件 · Don\'t Starve 是 Klei Entertainment 商标,Steam 是 Valve 商标',
+                '${t.setAuthorLine}\n${t.setAboutLine1}\n${t.setAboutLine2}',
                 style:
                     TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
               ),
@@ -230,19 +244,19 @@ class SettingsPage extends StatelessWidget {
                     onPressed: () => launchUrl(Uri.parse(
                         'https://github.com/HuanYue-NoPrediction/ConstantPublisher/issues')),
                     icon: const Icon(Icons.bug_report_outlined, size: 16),
-                    label: const Text('反馈问题'),
+                    label: Text(t.setBtnIssues),
                   ),
                   OutlinedButton.icon(
                     onPressed: () => launchUrl(
                         Uri.parse('mailto:1713597367@qq.com')),
                     icon: const Icon(Icons.mail_outline, size: 16),
-                    label: const Text('邮件联系'),
+                    label: Text(t.setBtnMail),
                   ),
                   OutlinedButton.icon(
                     onPressed: () => openSteamPage(
                         'https://steamcommunity.com/sharedfiles/filedetails/?id=3758340920'),
                     icon: const Icon(Icons.cloud_outlined, size: 16),
-                    label: const Text('创意工坊'),
+                    label: Text(t.setBtnWorkshop),
                   ),
                 ],
               ),
