@@ -653,7 +653,7 @@ class AppState extends ChangeNotifier {
               ));
             } else if (j['event'] == 'result') {
               ok = j['ok'] == true;
-              if (!ok) error = j['error']?.toString();
+              if (!ok) error = helperText(l10n, j) ?? j['error']?.toString();
             }
           } catch (_) {/* 非 JSON 行忽略 */}
         }

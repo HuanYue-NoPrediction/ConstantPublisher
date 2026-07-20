@@ -54,8 +54,8 @@ internal static class Program
     private static void Emit(object o) =>
         Console.WriteLine(JsonSerializer.Serialize(o));
 
-    private static void Fail(string error, int eresult = 0) =>
-        Emit(new { @event = "result", ok = false, error, eresult });
+    private static void Fail(string error, int eresult = 0, string? code = null, string? arg = null) =>
+        Emit(new { @event = "result", ok = false, error, eresult, code, arg });
 
     private static int Main(string[] args)
     {
@@ -74,7 +74,7 @@ internal static class Program
             Environment.SetEnvironmentVariable("SteamGameId", LaunchAppId.ToString());
             if (!TryInit(LaunchAppId)) return 0;
             try { return RunDesc(ulong.Parse(args[1])); }
-            catch (Exception e) { Fail("取简介失败: " + e.Message); return 0; }
+            catch (Exception e) { Fail("取简介失败: " + e.Message, 0, "desc_fail", e.Message); return 0; }
             finally { SteamAPI.Shutdown(); }
         }
 
@@ -92,7 +92,7 @@ internal static class Program
                 for (var k = 0; k < 20; k++) { SteamAPI.RunCallbacks(); Thread.Sleep(100); }
                 Emit(new { @event = "result", ok = true, deleted = args[1] });
             }
-            catch (Exception e) { Fail("删除失败: " + e.Message); }
+            catch (Exception e) { Fail("删除失败: " + e.Message, 0, "delete_fail", e.Message); }
             finally { SteamAPI.Shutdown(); }
             return 0;
         }
@@ -111,7 +111,7 @@ internal static class Program
             }
             catch (Exception e)
             {
-                Fail("助手内部异常: " + e.Message);
+                Fail("助手内部异常: " + e.Message, 0, "internal", e.Message);
                 return 0;
             }
             finally
@@ -122,7 +122,7 @@ internal static class Program
 
         if (args.Length < 1 || !File.Exists(args[0]))
         {
-            Fail("缺少请求文件参数");
+            Fail("缺少请求文件参数", 0, "no_request");
             return 1;
         }
 
@@ -135,7 +135,7 @@ internal static class Program
         }
         catch (Exception e)
         {
-            Fail("请求 JSON 解析失败: " + e.Message);
+            Fail("请求 JSON 解析失败: " + e.Message, 0, "bad_request", e.Message);
             return 1;
         }
 
@@ -152,7 +152,7 @@ internal static class Program
         }
         catch (Exception e)
         {
-            Fail("助手内部异常: " + e.Message);
+            Fail("助手内部异常: " + e.Message, 0, "internal", e.Message);
             return 0;
         }
         finally
@@ -220,30 +220,30 @@ internal static class Program
 
         if (req.PublishedFileId == 0)
         {
-            Emit(new { @event = "stage", stage = "CreateItem · 新建工坊条目" });
+            Emit(new { @event = "stage", code = "create_item", stage = "CreateItem · 新建工坊条目" });
             var call = SteamUGC.CreateItem(appId, EWorkshopFileType.k_EWorkshopFileTypeCommunity);
             if (call.m_SteamAPICall == 0)
             {
-                Fail("CreateItem 被 Steam 拒绝 —— 确认 Steam 在线、账号拥有饥荒,且 helper 旁的 steam_api64.dll 与 Steamworks.NET 版本匹配", 0);
+                Fail("CreateItem 被 Steam 拒绝 —— 确认 Steam 在线、账号拥有饥荒,且 helper 旁的 steam_api64.dll 与 Steamworks.NET 版本匹配", 0, "create_rejected");
                 return 0;
             }
             _createCR = CallResult<CreateItemResult_t>.Create(OnCreateItem);
             _createCR.Set(call);
             if (!Pump(() => _createDone, 60))
             {
-                Fail("CreateItem 超时(60 秒)", 0);
+                Fail("CreateItem 超时(60 秒)", 0, "create_timeout");
                 return 0;
             }
             if (_ioFailure || _createResult.m_eResult != EResult.k_EResultOK)
             {
-                Fail("CreateItem 失败", (int)_createResult.m_eResult);
+                Fail("CreateItem 失败", (int)_createResult.m_eResult, "create_fail");
                 return 0;
             }
             fileId = _createResult.m_nPublishedFileId;
-            Emit(new { @event = "log", message = "已创建条目 id " + fileId.m_PublishedFileId });
+            Emit(new { @event = "log", code = "item_created", arg = fileId.m_PublishedFileId.ToString(), message = "已创建条目 id " + fileId.m_PublishedFileId });
             if (_createResult.m_bUserNeedsToAcceptWorkshopLegalAgreement)
             {
-                Emit(new { @event = "log", message = "提示:需在 Steam 接受创意工坊法律协议后,条目才对他人可见" });
+                Emit(new { @event = "log", code = "legal_note", message = "提示:需在 Steam 接受创意工坊法律协议后,条目才对他人可见" });
             }
         }
 
@@ -262,9 +262,17 @@ internal static class Program
         {
             var L = langs[li];
             var withContent = li == 0; // 只有首条上传内容,其余是纯元数据更新(快)
-            Emit(new { @event = "stage", stage = withContent
-                ? (upContent ? $"上传内容 · 语言 {L.Language}" : "更新条目元数据")
-                : $"更新 {L.Language} 语言的标题/简介" });
+            Emit(new
+            {
+                @event = "stage",
+                code = withContent
+                    ? (upContent ? "upload_content" : "update_meta")
+                    : "update_lang_text",
+                arg = L.Language,
+                stage = withContent
+                    ? (upContent ? $"上传内容 · 语言 {L.Language}" : "更新条目元数据")
+                    : $"更新 {L.Language} 语言的标题/简介"
+            });
 
             var h = SteamUGC.StartItemUpdate(appId, fileId);
             if (upText)
@@ -290,7 +298,7 @@ internal static class Program
                     tagList.RemoveAll(t => t.StartsWith("version:", StringComparison.OrdinalIgnoreCase));
                     if (!string.IsNullOrEmpty(req.Version)) tagList.Add("version:" + req.Version);
                     if (tagList.Count > 0 && !SteamUGC.SetItemTags(h, tagList))
-                        Emit(new { @event = "log", message = "警告:SetItemTags 返回 false" });
+                        Emit(new { @event = "log", code = "tags_warn", message = "警告:SetItemTags 返回 false" });
                 }
                 if (upContent && !string.IsNullOrEmpty(req.Version))
                     SteamUGC.SetItemMetadata(h, req.Version);
@@ -308,7 +316,7 @@ internal static class Program
                 var status = SteamUGC.GetItemUpdateProgress(h, out ulong done, out ulong total);
                 if (total > 0)
                     Emit(new { @event = "progress", status = status.ToString(), done, total });
-                if (sw.Elapsed > TimeSpan.FromMinutes(30)) { Fail("上传超时(30 分钟)"); return 0; }
+                if (sw.Elapsed > TimeSpan.FromMinutes(30)) { Fail("上传超时(30 分钟)", 0, "upload_timeout"); return 0; }
                 Thread.Sleep(200);
             }
 
@@ -318,7 +326,7 @@ internal static class Program
                 var hint = er == 2
                     ? "(EResult 2 常见于 Steam 内容 CDN 网络问题:无法取回旧清单做增量,多为网络波动,稍后重试即可)"
                     : "";
-                Fail($"SubmitItemUpdate 失败 · 语言 {L.Language} {hint}", er);
+                Fail($"SubmitItemUpdate 失败 · 语言 {L.Language} {hint}", er, "submit_fail", L.Language);
                 return 0;
             }
         }
@@ -404,7 +412,7 @@ internal static class Program
                 new AppId_t(LaunchAppId), appId, page);
             if (q.m_UGCQueryHandle == ulong.MaxValue) // k_UGCQueryHandleInvalid
             {
-                Fail("CreateQueryUserUGCRequest 返回无效句柄");
+                Fail("CreateQueryUserUGCRequest 返回无效句柄", 0, "query_invalid");
                 return 0;
             }
             SteamUGC.SetReturnMetadata(q, true);
@@ -415,13 +423,13 @@ internal static class Program
             if (!Pump(() => _queryDone, 30))
             {
                 SteamUGC.ReleaseQueryUGCRequest(q);
-                Fail("QueryUserUGC 超时(30 秒)");
+                Fail("QueryUserUGC 超时(30 秒)", 0, "query_timeout");
                 return 0;
             }
             if (_ioFailure || _queryResult.m_eResult != EResult.k_EResultOK)
             {
                 SteamUGC.ReleaseQueryUGCRequest(q);
-                Fail("QueryUserUGC 失败", (int)_queryResult.m_eResult);
+                Fail("QueryUserUGC 失败", (int)_queryResult.m_eResult, "query_fail");
                 return 0;
             }
             var n = _queryResult.m_unNumResultsReturned;
@@ -484,19 +492,19 @@ internal static class Program
         {
             if (!SteamAPI.Init())
             {
-                Fail($"无法连接 Steam:请确认 Steam 客户端正在运行并已登录,且该账号拥有 AppID {appId} 对应的游戏");
+                Fail($"无法连接 Steam:请确认 Steam 客户端正在运行并已登录,且该账号拥有 AppID {appId} 对应的游戏", 0, "steam_connect", appId.ToString());
                 return false;
             }
             return true;
         }
         catch (DllNotFoundException)
         {
-            Fail("缺少 steam_api64.dll —— 它应与 CpSteamHelper.exe 在同一目录");
+            Fail("缺少 steam_api64.dll —— 它应与 CpSteamHelper.exe 在同一目录", 0, "dll_missing");
             return false;
         }
         catch (Exception e)
         {
-            Fail("Steamworks 初始化异常: " + e.Message);
+            Fail("Steamworks 初始化异常: " + e.Message, 0, "init_error", e.Message);
             return false;
         }
     }

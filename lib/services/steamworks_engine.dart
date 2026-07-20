@@ -10,6 +10,42 @@ import 'steamcmd.dart' show PublishEvent, PublishRequest;
 /// Steamworks 引擎:调用随包分发的 CpSteamHelper.exe,
 /// 借用正在运行的 Steam 客户端会话发布 —— 零配置、免密码,
 /// 与官方 ModUploader 同机制,且支持可靠标签与真实上传进度。
+String? helperText(AppLocalizations t, Map<String, dynamic> j) {
+  final code = j['code'] as String?;
+  if (code == null) return null;
+  final arg = j['arg']?.toString() ?? '';
+  return switch (code) {
+    'create_item' => t.hCreateItem,
+    'create_rejected' => t.hCreateRejected,
+    'create_timeout' => t.hCreateTimeout,
+    'create_fail' => t.hCreateFail,
+    'item_created' => t.hItemCreated(arg),
+    'legal_note' => t.hLegalNote,
+    'upload_content' => t.hUploadContent(arg),
+    'update_meta' => t.hUpdateMeta,
+    'update_lang_text' => t.hUpdateLangText(arg),
+    'tags_warn' => t.hTagsWarn,
+    'upload_timeout' => t.hUploadTimeout,
+    'submit_fail' => t.hSubmitFail(
+        arg,
+        ((j['eresult'] as num?)?.toInt() ?? 0) == 2
+            ? t.hEresult2Hint
+            : ''),
+    'no_request' => t.hNoRequest,
+    'bad_request' => t.hBadRequest(arg),
+    'internal' => t.hInternal(arg),
+    'desc_fail' => t.hDescFail(arg),
+    'delete_fail' => t.hDeleteFail(arg),
+    'steam_connect' => t.hSteamConnect(arg),
+    'dll_missing' => t.hDllMissing,
+    'init_error' => t.hInitError(arg),
+    'query_invalid' => t.hQueryInvalid,
+    'query_timeout' => t.hQueryTimeout,
+    'query_fail' => t.hQueryFail,
+    _ => null,
+  };
+}
+
 class SteamworksEngine {
   final String helperPath;
   final AppLocalizations t;
@@ -72,11 +108,13 @@ class SteamworksEngine {
       }
       switch (j['event']) {
         case 'stage':
-          final stage = j['stage'] as String? ?? '';
+          final stage = helperText(t, j) ?? (j['stage'] as String? ?? '');
           yield PublishEvent(
               stage: stage, progress: .2, logLine: '[steamworks] $stage');
         case 'log':
-          yield PublishEvent(logLine: '[steamworks] ${j['message']}');
+          yield PublishEvent(
+              logLine:
+                  '[steamworks] ${helperText(t, j) ?? j['message']}');
         case 'progress':
           final done = (j['done'] as num?)?.toDouble() ?? 0;
           final total = (j['total'] as num?)?.toDouble() ?? 0;
@@ -92,7 +130,8 @@ class SteamworksEngine {
           needsLegal = j['needsLegalAgreement'] == true;
           if (!ok) {
             final er = (j['eresult'] as num?)?.toInt() ?? 0;
-            final raw = j['error'] as String? ?? t.errUnknown;
+            final raw =
+                helperText(t, j) ?? (j['error'] as String? ?? t.errUnknown);
             error = er > 0 ? '$raw · ${decodeEResult(er, t)}' : raw;
           }
       }
