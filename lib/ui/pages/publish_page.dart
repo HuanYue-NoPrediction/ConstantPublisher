@@ -333,6 +333,7 @@ class _PublishPageState extends State<PublishPage> {
   Widget _fileRow(Mod mod, StagedEntry e) {
     final scheme = Theme.of(context).colorScheme;
     final sem = SemanticColors.of(context);
+    final t = AppLocalizations.of(context);
     return InkWell(
       borderRadius: BorderRadius.circular(6),
       onTap: () => _toggleEntry(mod, e),
@@ -360,7 +361,13 @@ class _PublishPageState extends State<PublishPage> {
             ),
           ),
           Text(
-            e.skipped ? (e.reason ?? '') : humanSize(e.size),
+            e.skipped
+                ? switch (e.reason) {
+                    'custom' => t.reasonCustom,
+                    'default' => t.reasonDefault,
+                    _ => e.reason ?? '',
+                  }
+                : humanSize(e.size),
             style: TextStyle(
                 fontSize: 10.5,
                 fontFamily: 'monospace',

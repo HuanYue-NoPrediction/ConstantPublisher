@@ -18,24 +18,6 @@ const Map<String, Color> kSeeds = {
   'slate': Color(0xFF4F5B62), // 石板灰
 };
 
-/// 每个种子色的中文名(设置页悬停/无障碍标签用)。
-const Map<String, String> kSeedNames = {
-  'purple': '紫',
-  'indigo': '靛蓝',
-  'blue': '海蓝',
-  'cyan': '青',
-  'teal': '蓝绿',
-  'green': '松绿',
-  'lime': '橄榄',
-  'amber': '琥珀',
-  'orange': '橙',
-  'clay': '陶土',
-  'red': '绯红',
-  'pink': '玫红',
-  'magenta': '品红',
-  'slate': '石板灰',
-};
-
 /// Win11 的可变光学字体:正文用 Text 视觉,大标题用 Display 视觉(更秀气),
 /// 中文回退雅黑;都不存在时退回 Flutter 自带 Roboto,不会出错。
 const String _bodyFont = 'Segoe UI Variable Text';

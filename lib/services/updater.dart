@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import '../l10n/gen/app_localizations.dart';
 import '../models/mod.dart';
 import '../version.dart';
 
@@ -35,7 +36,7 @@ Future<UpdateInfo?> checkWorkshopUpdate(String modsDir) async {
       if (!await vf.exists() || !await zf.exists()) continue;
       final v = (await vf.readAsString()).trim();
       if (v.isNotEmpty && cmpVer(v, kAppVersion) > 0) {
-        return UpdateInfo(version: v, source: '创意工坊', zipPath: zf.path);
+        return UpdateInfo(version: v, source: 'workshop', zipPath: zf.path);
       }
     }
   } catch (_) {}
@@ -61,7 +62,7 @@ Future<UpdateInfo?> _checkGithubAsset() async {
     if (v.isEmpty || cmpVer(v, kAppVersion) <= 0) return null;
     return UpdateInfo(
         version: v,
-        source: 'GitHub',
+        source: 'github',
         downloadUrl:
             'https://github.com/$_kRepo/releases/latest/download/DSTModPublisher-windows.zip');
   } catch (_) {
@@ -91,7 +92,7 @@ Future<UpdateInfo?> _checkGithubApi() async {
       if (m['name'] == 'DSTModPublisher-windows.zip') {
         return UpdateInfo(
             version: tag,
-            source: 'GitHub',
+            source: 'github',
             downloadUrl: m['browser_download_url'] as String?);
       }
     }
@@ -134,8 +135,8 @@ Future<String?> downloadZip(String url,
   }
 }
 
-Future<String?> applyUpdate(String zipPath) async {
-  if (!Platform.isWindows) return '自动更新目前仅支持 Windows';
+Future<String?> applyUpdate(String zipPath, AppLocalizations t) async {
+  if (!Platform.isWindows) return t.errUpdateWinOnly;
   final updDir =
       Directory(p.join(Directory.systemTemp.path, 'dst_mod_publisher_update'));
   final staging = Directory(p.join(updDir.path, 'staging'));
@@ -146,18 +147,18 @@ Future<String?> applyUpdate(String zipPath) async {
     '-Command',
     'Expand-Archive -LiteralPath "$zipPath" -DestinationPath "${staging.path}" -Force',
   ]);
-  if (unzip.exitCode != 0) return '解压失败:${unzip.stderr}';
+  if (unzip.exitCode != 0) return t.errUnzipFail('${unzip.stderr}');
   if (!await File(p.join(staging.path, 'dst_mod_publisher.exe')).exists()) {
-    return '更新包无效:缺少主程序';
+    return t.errZipNoExe;
   }
   final stagedHelper =
       File(p.join(staging.path, 'helper', 'CpSteamHelper.exe'));
-  if (!await stagedHelper.exists()) return '更新包无效:缺少 helper';
+  if (!await stagedHelper.exists()) return t.errZipNoHelper;
   final runner = File(p.join(updDir.path, 'apply_helper.exe'));
   try {
     await stagedHelper.copy(runner.path);
   } catch (_) {
-    return '无法准备更新程序(apply_helper.exe 被占用?)';
+    return t.errApplyHelperBusy;
   }
   final installDir = File(Platform.resolvedExecutable).parent.path;
   await Process.start(

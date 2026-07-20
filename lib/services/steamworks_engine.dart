@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import '../l10n/gen/app_localizations.dart';
 import '../models/eresult.dart';
 import 'steamcmd.dart' show PublishEvent, PublishRequest;
 
@@ -11,14 +12,14 @@ import 'steamcmd.dart' show PublishEvent, PublishRequest;
 /// 与官方 ModUploader 同机制,且支持可靠标签与真实上传进度。
 class SteamworksEngine {
   final String helperPath;
+  final AppLocalizations t;
 
-  SteamworksEngine({required this.helperPath});
+  SteamworksEngine({required this.helperPath, required this.t});
 
   Stream<PublishEvent> publish(PublishRequest req) async* {
     if (!await File(helperPath).exists()) {
       yield PublishEvent(
-        error: '找不到 Steamworks 助手:$helperPath\n'
-            '请使用完整发行包;开发模式下先运行 dotnet publish helper',
+        error: t.errHelperNotFound(helperPath),
         done: true,
       );
       return;
@@ -46,7 +47,7 @@ class SteamworksEngine {
       'updateVisibility': req.updateVisibility,
     }));
 
-    yield const PublishEvent(stage: '连接 Steam 客户端', progress: .12);
+    yield PublishEvent(stage: t.stConnectSteam, progress: .12);
     final proc = await Process.start(helperPath, [reqFile.path]);
     await proc.stdin.close();
     final errFuture = proc.stderr
@@ -91,8 +92,8 @@ class SteamworksEngine {
           needsLegal = j['needsLegalAgreement'] == true;
           if (!ok) {
             final er = (j['eresult'] as num?)?.toInt() ?? 0;
-            final raw = j['error'] as String? ?? '未知错误';
-            error = er > 0 ? '$raw · ${decodeEResult(er)}' : raw;
+            final raw = j['error'] as String? ?? t.errUnknown;
+            error = er > 0 ? '$raw · ${decodeEResult(er, t)}' : raw;
           }
       }
     }
@@ -102,15 +103,14 @@ class SteamworksEngine {
     final code = await proc.exitCode;
 
     if (!ok) {
-      yield PublishEvent(done: true, error: error ?? '助手异常退出(exit $code)');
+      yield PublishEvent(
+          done: true, error: error ?? t.errHelperExit('$code'));
       return;
     }
     if (needsLegal) {
-      yield const PublishEvent(
-          logLine:
-              '⚠ 需在 Steam 接受创意工坊法律协议后条目才对他人可见:steamcommunity.com/sharedfiles/workshoplegalagreement');
+      yield PublishEvent(logLine: t.msgLegalAgreement);
     }
     yield PublishEvent(
-        stage: '完成', progress: 1, done: true, publishedFileId: newId);
+        stage: t.stDone, progress: 1, done: true, publishedFileId: newId);
   }
 }

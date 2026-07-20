@@ -109,6 +109,7 @@ Future<List<WorkshopItemRemote>> fetchUserItems({
   required String apiKey,
   required String steamId64,
   int appId = 322330,
+  String untitled = '(untitled)',
 }) async {
   final uri = Uri.https('api.steampowered.com',
       '/IPublishedFileService/GetUserFiles/v1/', {
@@ -136,7 +137,7 @@ Future<List<WorkshopItemRemote>> fetchUserItems({
       final m = f as Map<String, dynamic>;
       return WorkshopItemRemote(
         id: '${m['publishedfileid']}',
-        title: m['title'] as String? ?? '(无标题)',
+        title: m['title'] as String? ?? untitled,
         subs: (m['subscriptions'] as num?)?.toInt() ?? 0,
         updated: m['time_updated'] != null
             ? DateTime.fromMillisecondsSinceEpoch(

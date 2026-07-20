@@ -134,7 +134,7 @@ class SettingsPage extends StatelessWidget {
                       children: [
                         for (final entry in kSeeds.entries)
                           Tooltip(
-                            message: kSeedNames[entry.key] ?? entry.key,
+                            message: _seedName(t, entry.key),
                             child: InkWell(
                               borderRadius: BorderRadius.circular(20),
                               onTap: () => state.setSeed(entry.key),
@@ -267,6 +267,24 @@ class SettingsPage extends StatelessWidget {
     );
   }
 }
+
+String _seedName(AppLocalizations t, String key) => switch (key) {
+      'purple' => t.seedPurple,
+      'indigo' => t.seedIndigo,
+      'blue' => t.seedBlue,
+      'cyan' => t.seedCyan,
+      'teal' => t.seedTeal,
+      'green' => t.seedGreen,
+      'lime' => t.seedLime,
+      'amber' => t.seedAmber,
+      'orange' => t.seedOrange,
+      'clay' => t.seedClay,
+      'red' => t.seedRed,
+      'pink' => t.seedPink,
+      'magenta' => t.seedMagenta,
+      'slate' => t.seedSlate,
+      _ => key,
+    };
 
 class _PathRow extends StatelessWidget {
   final String label;

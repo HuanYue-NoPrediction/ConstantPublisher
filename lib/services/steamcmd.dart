@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import '../l10n/gen/app_localizations.dart';
 import '../models/eresult.dart';
 
 /// 发布过程中的事件流:阶段、日志行、结果。
@@ -104,25 +105,26 @@ String buildVdf(PublishRequest r) {
 class SteamcmdEngine {
   final String steamcmdPath;
   final String username;
+  final AppLocalizations t;
 
-  SteamcmdEngine({required this.steamcmdPath, required this.username});
+  SteamcmdEngine(
+      {required this.steamcmdPath, required this.username, required this.t});
 
   /// 跑一次 workshop_build_item。凭据依赖 steamcmd 的本机缓存
   /// (首次需要在终端里交互登录一次通过 Steam Guard)。
   Stream<PublishEvent> publish(PublishRequest req) async* {
     if (!await File(steamcmdPath).exists()) {
-      yield const PublishEvent(
-          error: '找不到 steamcmd.exe —— 到设置页指定路径', done: true);
+      yield PublishEvent(error: t.errSteamcmdNotFound, done: true);
       return;
     }
 
-    yield const PublishEvent(stage: '写入 VDF', progress: .05);
+    yield PublishEvent(stage: t.stWriteVdf, progress: .05);
     final vdfFile = File(p.join(
         Directory.systemTemp.path, 'dst_mod_publisher', 'item.vdf'));
     await vdfFile.parent.create(recursive: true);
     await vdfFile.writeAsString(buildVdf(req));
 
-    yield const PublishEvent(stage: '启动 steamcmd', progress: .1);
+    yield PublishEvent(stage: t.stStartSteamcmd, progress: .1);
     final proc = await Process.start(steamcmdPath, [
       '+login', username,
       '+workshop_build_item', vdfFile.path,
@@ -177,22 +179,21 @@ class SteamcmdEngine {
     } catch (_) {}
 
     if (sawGuard) {
-      yield const PublishEvent(
+      yield PublishEvent(
         done: true,
-        error: '需要 Steam Guard 验证:请先在终端手动运行一次\n'
-            'steamcmd +login <账号> 完成验证(本机缓存后不再需要)',
+        error: t.errSteamGuard,
       );
       return;
     }
     if (eresult != null && eresult != 1) {
-      yield PublishEvent(done: true, error: decodeEResult(eresult));
+      yield PublishEvent(done: true, error: decodeEResult(eresult, t));
       return;
     }
     if (code != 0 && newId == null) {
-      yield PublishEvent(done: true, error: 'steamcmd 退出码 $code,查看日志');
+      yield PublishEvent(done: true, error: t.errSteamcmdExit('$code'));
       return;
     }
     yield PublishEvent(
-        stage: '完成', progress: 1, done: true, publishedFileId: newId);
+        stage: t.stDone, progress: 1, done: true, publishedFileId: newId);
   }
 }

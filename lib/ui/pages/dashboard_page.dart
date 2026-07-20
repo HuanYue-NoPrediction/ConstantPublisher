@@ -53,8 +53,8 @@ class _DashboardPageState extends State<DashboardPage> {
         if (state.update != null) ...[
           SectionCard(
             title: t.updateFoundTitle(state.update!.version),
-            subtitle:
-                t.updateFoundSubtitle(state.update!.source, kAppVersion),
+            subtitle: t.updateFoundSubtitle(
+                state.srcName(state.update!.source), kAppVersion),
             trailing: Icon(Icons.system_update, color: scheme.primary),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

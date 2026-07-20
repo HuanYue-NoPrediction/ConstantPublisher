@@ -82,9 +82,9 @@ Future<StagePlan> planStage(Mod mod) async {
     if (mod.pub.keep.any((pat) => _match(rel, pat))) {
       reason = null; // keep 白名单:强制保留,压过一切忽略规则
     } else if (mod.pub.ignore.any((pat) => _match(rel, pat))) {
-      reason = '自定义';
+      reason = 'custom';
     } else if (hiddenDir || kDefaultIgnore.any((pat) => _match(rel, pat))) {
-      reason = '默认忽略';
+      reason = 'default';
     } else if (fromFile.any((pat) => _match(rel, pat))) {
       reason = '.modignore';
     }

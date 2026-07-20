@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/gen/app_localizations.dart';
+
 class BBCodePreview extends StatelessWidget {
   final String source;
   const BBCodePreview(this.source, {super.key});
@@ -76,7 +78,9 @@ class BBCodePreview extends StatelessWidget {
               if ((m.group(6) ?? '').isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 4),
-                  child: Text('${m.group(6)} 发表:',
+                  child: Text(
+                      AppLocalizations.of(context)
+                          .bbPrevQuoteBy('${m.group(6)}'),
                       style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -89,7 +93,8 @@ class BBCodePreview extends StatelessWidget {
       } else if (m.group(8) != null) {
         blocks.add(_table(context, m.group(8)!));
       } else if (m.group(9) != null) {
-        blocks.add(_placeholder(context, '视频(发布后显示):${m.group(9)}'));
+        blocks.add(_placeholder(context,
+            AppLocalizations.of(context).bbPrevVideo('${m.group(9)}')));
       } else if (m.group(10) != null) {
         blocks.add(Padding(
           padding: const EdgeInsets.only(bottom: 4),
@@ -243,7 +248,10 @@ class BBCodePreview extends StatelessWidget {
                 decoration: TextDecoration.underline)));
       case 'img':
         spans.add(WidgetSpan(
-          child: _placeholder(context, '图片(发布后显示):${first.group(1)}'),
+          child: _placeholder(
+              context,
+              AppLocalizations.of(context)
+                  .bbPrevImage('${first.group(1)}')),
         ));
       case 'spoiler':
         spans.add(TextSpan(

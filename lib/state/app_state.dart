@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../l10n/gen/app_localizations.dart';
 import '../models/mod.dart';
 import '../services/stager.dart';
 import '../services/steamcmd.dart';
@@ -52,6 +53,13 @@ class AppState extends ChangeNotifier {
     localePref = v;
     await _persist('localePref', v);
     notifyListeners();
+  }
+
+  AppLocalizations get l10n {
+    final code =
+        (appLocale ?? WidgetsBinding.instance.platformDispatcher.locale)
+            .languageCode;
+    return lookupAppLocalizations(Locale(code == 'zh' ? 'zh' : 'en'));
   }
 
   // ---------- 数据 ----------
@@ -120,12 +128,16 @@ class AppState extends ChangeNotifier {
     final u = await checkWorkshopUpdate(modsDir) ?? await checkGithubUpdate();
     update = u;
     if (u != null) {
-      log(LogLevel.info, '发现新版本 v${u.version}(${u.source}),当前 v$kAppVersion');
+      log(LogLevel.info,
+          l10n.msgUpdateFound(u.version, srcName(u.source), kAppVersion));
     } else if (manual) {
-      log(LogLevel.info, '已是最新版本 v$kAppVersion');
+      log(LogLevel.info, l10n.msgUpToDate(kAppVersion));
     }
     notifyListeners();
   }
+
+  String srcName(String code) =>
+      code == 'workshop' ? l10n.srcWorkshop : l10n.srcGithub;
 
   void dismissUpdate() {
     update = null;
@@ -139,39 +151,39 @@ class AppState extends ChangeNotifier {
     final u = update;
     if (u == null || busy) return;
     busy = true;
-    updateStage = '准备更新…';
+    updateStage = l10n.updPreparing;
     updateProgress = null;
     notifyListeners();
     var lastNotified = 0.0;
     try {
       var zip = u.zipPath;
       if (zip == null && u.downloadUrl != null) {
-        log(LogLevel.info, '正在从 ${u.source} 下载 v${u.version}…');
+        log(LogLevel.info, l10n.msgDownloading(srcName(u.source), u.version));
         zip = await downloadZip(u.downloadUrl!, onProgress: (done, total) {
           if (total > 0) {
             final frac = done / total;
             if (frac - lastNotified < 0.01 && frac < 1) return;
             lastNotified = frac;
             updateProgress = frac;
-            updateStage =
-                '下载 v${u.version} · ${(done / 1048576).toStringAsFixed(1)}/${(total / 1048576).toStringAsFixed(1)} MB';
+            updateStage = l10n.updDownloadStage(u.version,
+                '${(done / 1048576).toStringAsFixed(1)}/${(total / 1048576).toStringAsFixed(1)}');
           } else {
-            updateStage =
-                '下载 v${u.version} · ${(done / 1048576).toStringAsFixed(1)} MB';
+            updateStage = l10n.updDownloadStage(
+                u.version, (done / 1048576).toStringAsFixed(1));
           }
           notifyListeners();
         });
       }
       if (zip == null) {
-        log(LogLevel.error, '更新包获取失败,稍后重试');
+        log(LogLevel.error, l10n.msgUpdateFetchFail);
         return;
       }
-      updateStage = '解压并替换文件,应用即将自动重启…';
+      updateStage = l10n.updApplying;
       updateProgress = null;
       notifyListeners();
-      log(LogLevel.info, '应用更新中,即将自动重启…');
-      final err = await applyUpdate(zip);
-      if (err != null) log(LogLevel.error, '更新失败:$err');
+      log(LogLevel.info, l10n.msgUpdateRestart);
+      final err = await applyUpdate(zip, l10n);
+      if (err != null) log(LogLevel.error, l10n.msgUpdateFail(err));
     } finally {
       busy = false;
       updateStage = null;
@@ -272,11 +284,11 @@ class AppState extends ChangeNotifier {
           if (mod != null) mods.add(mod);
         } catch (e) {
           // 单个坏模组不能中断整轮扫描
-          log(LogLevel.warn, '跳过无法读取的模组 ${ent.path}:$e');
+          log(LogLevel.warn, l10n.msgSkipMod(ent.path, '$e'));
         }
       }
       mods.sort((a, b) => a.info.name.compareTo(b.info.name));
-      log(LogLevel.info, '扫描 $modsDir → ${mods.length} 个模组');
+      log(LogLevel.info, l10n.msgScanned(modsDir, '${mods.length}'));
     }
     if (current != null &&
         !mods.any((m) => m.path == current!.path)) {
@@ -297,12 +309,12 @@ class AppState extends ChangeNotifier {
     if (existing != null) return existing;
     final mod = await Mod.load(Directory(dir));
     if (mod == null) {
-      log(LogLevel.error, '$dir 里没有有效的 modinfo.lua,无法作为模组文件夹');
+      log(LogLevel.error, l10n.msgNoModinfo(dir));
       return null;
     }
     mods.add(mod);
     mods.sort((a, b) => a.info.name.compareTo(b.info.name));
-    log(LogLevel.info, '已加入外部文件夹 ${mod.folderName}/(${mod.info.name})');
+    log(LogLevel.info, l10n.msgExternalAdded(mod.folderName, mod.info.name));
     notifyListeners();
     return mod;
   }
@@ -325,10 +337,13 @@ class AppState extends ChangeNotifier {
   // ---------- Dry-run ----------
   Future<StagePlan> dryRun(Mod mod) async {
     final plan = await planStage(mod);
-    log(LogLevel.info,
-        'Dry-run(${mod.info.name}):${plan.kept.length} 项 · '
-        '${(plan.totalSize / 1048576).toStringAsFixed(2)} MB · '
-        '${plan.dropped.length} 项被忽略 · 未上传');
+    log(
+        LogLevel.info,
+        l10n.msgDryRun(
+            mod.info.name,
+            '${plan.kept.length}',
+            (plan.totalSize / 1048576).toStringAsFixed(2),
+            '${plan.dropped.length}'));
     return plan;
   }
 
@@ -354,18 +369,18 @@ class AppState extends ChangeNotifier {
       log(
           LogLevel.error,
           engine == 'steamworks'
-              ? '发布环境未就绪:未找到 Steamworks 助手(helper\\CpSteamHelper.exe),请使用完整发行包'
-              : '发布环境未就绪:检查 steamcmd 路径与账号(设置页)');
+              ? l10n.msgEnvNotReadySw
+              : l10n.msgEnvNotReadyCmd);
       return false;
     }
     busy = true;
     failNote = null;
-    progress = const PublishProgress('校验 modinfo.lua', .02);
+    progress = PublishProgress(l10n.stValidate, .02);
     notifyListeners();
 
     try {
       if (!mod.info.valid) {
-        throw Exception('modinfo.lua 无效:缺少 name 或 version');
+        throw Exception(l10n.errModinfoInvalid);
       }
       var contentFolder = mod.path;
       if (upContent) {
@@ -377,33 +392,37 @@ class AppState extends ChangeNotifier {
                     ?.version ??
                 '');
         if (wsVersion.isNotEmpty && cmpVer(version, wsVersion) <= 0) {
-          throw Exception('版本 $version 需大于工坊当前 $wsVersion');
+          throw Exception(l10n.errVersionTooLow(version, wsVersion));
         }
 
         // 版本写回 modinfo.lua
         if (version != mod.info.version) {
           await mod.writeVersion(version);
-          log(LogLevel.info, 'modinfo.lua version → $version');
+          log(LogLevel.info, l10n.msgVersionWritten(version));
         }
 
-        progress = const PublishProgress('暂存清洗副本', .1);
+        progress = PublishProgress(l10n.stStage, .1);
         notifyListeners();
         final plan = await planStage(mod);
         if (plan.overLimit) {
           // SteamPipe 工坊无固定体积硬上限(100MB 是老 Steam Cloud 通道的限制),
           // 超大包只提示不拦截,真被拒会由 Steam 返回 EResult
-          log(LogLevel.warn,
-              '内容 ${(plan.totalSize / 1048576).toStringAsFixed(1)} MB 较大,上传耗时会变长;若被 Steam 拒绝请检查是否含无关大文件');
+          log(
+              LogLevel.warn,
+              l10n.msgLargeContent(
+                  (plan.totalSize / 1048576).toStringAsFixed(1)));
         }
         final staged = await materialize(mod, plan);
-        log(LogLevel.info,
-            '已暂存 ${plan.kept.length} 项(忽略 ${plan.dropped.length} 项)→ ${staged.path}');
+        log(
+            LogLevel.info,
+            l10n.msgStaged('${plan.kept.length}', '${plan.dropped.length}',
+                staged.path));
         if (mod.pub.appId == 322330) {
-          log(LogLevel.info, '已生成 mod.manifest(游戏资源索引,与官方上传器一致)');
+          log(LogLevel.info, l10n.msgManifested);
         }
         contentFolder = staged.path;
       } else {
-        log(LogLevel.info, '本次不更新内容文件,跳过版本校验与暂存');
+        log(LogLevel.info, l10n.msgSkipContent);
       }
 
       String? preview;
@@ -413,7 +432,7 @@ class AppState extends ChangeNotifier {
           final len = await pv.length();
           if (len >= 1024 * 1024) {
             throw Exception(
-                '预览图 ${(len / 1024).round()} KB ≥ 1MB 上限,Steam 会拒收');
+                l10n.errPreviewTooBig('${(len / 1024).round()}'));
           }
           preview = pv.path;
         }
@@ -447,8 +466,9 @@ class AppState extends ChangeNotifier {
         updateVisibility: upVisibility,
       );
       final Stream<PublishEvent> events = engine == 'steamworks'
-          ? SteamworksEngine(helperPath: helperPath).publish(req)
-          : SteamcmdEngine(steamcmdPath: steamcmdPath, username: steamUser)
+          ? SteamworksEngine(helperPath: helperPath, t: l10n).publish(req)
+          : SteamcmdEngine(
+                  steamcmdPath: steamcmdPath, username: steamUser, t: l10n)
               .publish(req);
 
       String? newId;
@@ -475,7 +495,7 @@ class AppState extends ChangeNotifier {
       publishTargetId = resultId; // 会话内:新建后再次发布即更新该条目
       if (resultId != null) _itemLangsCache.remove(resultId); // 简介已变,缓存失效
       log(LogLevel.info,
-          '✔ 已发布 ${mod.info.name} v$version(条目 ${resultId ?? '?'})· 更新记录已写入');
+          l10n.msgPublished(mod.info.name, version, resultId ?? '?'));
       // 本地先行更新列表(即时反映),不马上起 list 助手 ——
       // 刚发布完 Steam 会话尚未释放,立刻查询会撞车;延后 4 秒再拉一次
       if (resultId != null) _upsertLocal(resultId, mod, version, visibility);
@@ -484,7 +504,7 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       final msg = e.toString().replaceFirst('Exception: ', '');
       failNote = msg;
-      log(LogLevel.error, '发布失败:$msg —— 表单内容与草稿完好,修复后直接重试');
+      log(LogLevel.error, l10n.msgPublishFail(msg));
       return false;
     } finally {
       busy = false;
@@ -613,7 +633,7 @@ class AppState extends ChangeNotifier {
               }
               items.add(WorkshopItemRemote(
                 id: j['id'].toString(),
-                title: j['title'] as String? ?? '(无标题)',
+                title: j['title'] as String? ?? l10n.untitledItem,
                 subs: (j['subs'] as num?)?.toInt() ?? 0,
                 favorites: (j['favorites'] as num?)?.toInt() ?? 0,
                 comments: (j['comments'] as num?)?.toInt() ?? 0,
@@ -645,8 +665,8 @@ class AppState extends ChangeNotifier {
           log(
               LogLevel.info,
               items.isEmpty
-                  ? 'QueryUserUGC → 0 个条目:该账号尚未发布过工坊模组(功能正常)'
-                  : 'QueryUserUGC → ${items.length} 个条目(零配置,来自 Steam 会话)');
+                  ? l10n.msgQueryEmpty
+                  : l10n.msgQueryOk('${items.length}'));
         } else {
           // Steam 的 breakpad/minidump/API 等 stderr 属正常输出,不当错误刷屏
           final noise = RegExp(r'minidump|breakpad|API loaded|SetMinidump');
@@ -654,11 +674,11 @@ class AppState extends ChangeNotifier {
             if (!noise.hasMatch(line)) log(LogLevel.warn, '[helper] $line');
           }
           log(LogLevel.warn,
-              '拉取名下条目失败:${error ?? '助手退出($code)'} —— 不影响发布,稍后自动重试');
+              l10n.msgListFail(error ?? l10n.helperExit('$code')));
         }
       } catch (e) {
         proc?.kill();
-        log(LogLevel.warn, '拉取名下条目出错:$e —— 不影响发布');
+        log(LogLevel.warn, l10n.msgListErr('$e'));
       }
       notifyListeners();
       return;
@@ -667,15 +687,18 @@ class AppState extends ChangeNotifier {
     // 备用:Steam Web API(steamcmd 引擎 / 无助手环境)
     if (webApiKey.isEmpty || steamId64.isEmpty) {
       log(LogLevel.warn,
-          'steamcmd 引擎下拉取名下条目需配置 Web API Key / SteamID64(设置页);切回 Steamworks 引擎则零配置');
+          l10n.msgNeedWebApi);
       return;
     }
     try {
       remoteItems =
-          await fetchUserItems(apiKey: webApiKey, steamId64: steamId64);
-      log(LogLevel.info, 'GetUserFiles → ${remoteItems.length} 个条目');
+          await fetchUserItems(
+              apiKey: webApiKey,
+              steamId64: steamId64,
+              untitled: l10n.untitledItem);
+      log(LogLevel.info, l10n.msgGetUserFiles('${remoteItems.length}'));
     } catch (e) {
-      log(LogLevel.error, '拉取工坊条目失败:$e');
+      log(LogLevel.error, l10n.msgFetchFail('$e'));
     }
     notifyListeners();
   }
