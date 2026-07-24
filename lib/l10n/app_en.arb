@@ -90,6 +90,8 @@
   "setBtnIssues": "Report an issue",
   "setBtnMail": "Email",
   "setBtnWorkshop": "Workshop",
+  "setMacMaintainer": "macOS build maintained by Chilla",
+  "setBtnMacHome": "Chilla on Steam",
   "pubTitle": "Publish",
   "pubDraftHint": "Everything you type is saved as a draft — nothing is lost on a failed upload",
   "pubDraftRestored": "Draft restored (saved {time})",

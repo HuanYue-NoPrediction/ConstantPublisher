@@ -100,6 +100,8 @@
   "setBtnIssues": "反馈问题",
   "setBtnMail": "邮件联系",
   "setBtnWorkshop": "创意工坊",
+  "setMacMaintainer": "macOS 版由 Chilla 维护",
+  "setBtnMacHome": "Chilla 的 Steam",
   "pubTitle": "发布",
   "pubDraftHint": "编辑内容会自动保存为草稿 —— 上传失败也不会丢",
   "pubDraftRestored": "草稿已恢复(保存于 {time})",

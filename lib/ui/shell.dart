@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
@@ -78,11 +80,13 @@ class _TitleBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final state = context.watch<AppState>();
+    final isMac = Platform.isMacOS;
     return SizedBox(
       height: 42,
       child: Row(
         children: [
-          const SizedBox(width: 14),
+          // macOS 原生窗口按钮(红绿灯)在左上角,留出空间避免挡住 eye.gif
+          SizedBox(width: isMac ? 78 : 14),
           // 会扑腾的恐怖之眼(GIF 动画,ico 做不到,窗口内可以)
           Image.asset('assets/eye.gif',
               width: 26,
@@ -107,21 +111,25 @@ class _TitleBar extends StatelessWidget {
             },
             icon: const Icon(Icons.brightness_medium_outlined),
           ),
-          _WinButton(
-              icon: Icons.remove, onTap: () => windowManager.minimize()),
-          _WinButton(
-              icon: Icons.crop_square,
-              onTap: () async {
-                if (await windowManager.isMaximized()) {
-                  await windowManager.unmaximize();
-                } else {
-                  await windowManager.maximize();
-                }
-              }),
-          _WinButton(
-              icon: Icons.close,
-              hoverColor: const Color(0xFFE81123),
-              onTap: () => windowManager.close()),
+          // Windows 无原生窗口按钮,才画自绘的最小化/最大化/关闭;macOS 用系统红绿灯
+          if (!isMac) ...[
+            _WinButton(
+                icon: Icons.remove, onTap: () => windowManager.minimize()),
+            _WinButton(
+                icon: Icons.crop_square,
+                onTap: () async {
+                  if (await windowManager.isMaximized()) {
+                    await windowManager.unmaximize();
+                  } else {
+                    await windowManager.maximize();
+                  }
+                }),
+            _WinButton(
+                icon: Icons.close,
+                hoverColor: const Color(0xFFE81123),
+                onTap: () => windowManager.close()),
+          ] else
+            const SizedBox(width: 8),
         ],
       ),
     );

@@ -66,6 +66,17 @@ internal static class Program
 
         Console.OutputEncoding = new UTF8Encoding(false);
 
+        // macOS 上 Steam 不认 SteamAppId 环境变量,只认工作目录里的 steam_appid.txt。
+        // 把 CWD 固定到 helper 自身目录并确保该文件存在,使 SteamAPI.Init 能识别 AppID。
+        // (Windows 上环境变量本就有效,此处无害。)
+        try { Directory.SetCurrentDirectory(AppContext.BaseDirectory); } catch { }
+        try
+        {
+            var appidFile = Path.Combine(AppContext.BaseDirectory, "steam_appid.txt");
+            if (!File.Exists(appidFile)) File.WriteAllText(appidFile, LaunchAppId.ToString());
+        }
+        catch { }
+
         // 模式四:desc <publishedfileid> —— 按各语言分别取该条目的标题/简介
         // (list 只取默认语言;多语言编辑需要每种语言各自的底稿)
         if (args.Length >= 2 && args[0] == "desc")

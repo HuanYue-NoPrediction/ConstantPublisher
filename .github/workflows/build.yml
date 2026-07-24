@@ -94,8 +94,17 @@ jobs:
       - name: 构建 Release
         run: flutter build macos --release
 
-      - name: 构建 Steamworks 助手(osx-arm64,自包含单文件)
-        run: dotnet publish helper/CpSteamHelper.csproj -c Release -r osx-arm64 -o helper_out
+      - name: 构建 Steamworks 助手(osx-arm64,文件夹式自包含)
+        # 改为文件夹式:单文件模式下无法把补丁后的 Steamworks.NET 放进 bundle,故用文件夹部署
+        run: >
+          dotnet publish helper/CpSteamHelper.csproj -c Release -r osx-arm64
+          --self-contained true -p:PublishSingleFile=false
+          -p:IncludeNativeLibrariesForSelfExtract=false -o helper_out
+
+      - name: 修补 Steamworks.NET 为 arm64
+        # Steamworks.NET 的 NuGet 包只有 osx-x64(PE 头标记 x64),arm64 进程加载器拒收,
+        # 原来的单文件助手因此一启动就崩。打补丁把 Machine 字段改成 arm64(纯 IL,安全)。
+        run: python3 helper/patch_steamworks.py helper_out/Steamworks.NET.dll
 
       - name: 合并助手到 .app 内(含 libsteam_api.dylib)
         run: |

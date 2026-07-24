@@ -225,7 +225,7 @@ class SettingsPage extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 4),
               Text(
-                '${t.setAuthorLine}\n${t.setAboutLine1}\n${t.setAboutLine2}',
+                '${t.setAuthorLine}\n${t.setMacMaintainer}\n${t.setAboutLine1}\n${t.setAboutLine2}',
                 style:
                     TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
               ),
@@ -257,6 +257,12 @@ class SettingsPage extends StatelessWidget {
                         'https://steamcommunity.com/sharedfiles/filedetails/?id=3758340920'),
                     icon: const Icon(Icons.cloud_outlined, size: 16),
                     label: Text(t.setBtnWorkshop),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => openSteamPage(
+                        'https://steamcommunity.com/id/Chilla_s_url/'),
+                    icon: const Icon(Icons.person_outline, size: 16),
+                    label: Text(t.setBtnMacHome),
                   ),
                 ],
               ),
