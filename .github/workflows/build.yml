@@ -106,6 +106,10 @@ jobs:
         # 原来的单文件助手因此一启动就崩。打补丁把 Machine 字段改成 arm64(纯 IL,安全)。
         run: python3 helper/patch_steamworks.py helper_out/Steamworks.NET.dll
 
+      - name: 写入 steam_appid.txt
+        # 签名前放好,避免 helper 首次运行时自建它而破坏 .app 的签名封印
+        run: printf "245850" > helper_out/steam_appid.txt
+
       - name: 合并助手到 .app 内(含 libsteam_api.dylib)
         run: |
           APP="build/macos/Build/Products/Release/dst_mod_publisher.app"

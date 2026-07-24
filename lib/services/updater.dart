@@ -32,7 +32,7 @@ Future<UpdateInfo?> checkWorkshopUpdate(String modsDir) async {
     await for (final ent in content.list(followLinks: false)) {
       if (ent is! Directory) continue;
       final vf = File(p.join(ent.path, 'version.txt'));
-      final zf = File(p.join(ent.path, 'DSTModPublisher-windows.zip'));
+      final zf = File(p.join(ent.path, _updateAsset()));
       if (!await vf.exists() || !await zf.exists()) continue;
       final v = (await vf.readAsString()).trim();
       if (v.isNotEmpty && cmpVer(v, kAppVersion) > 0) {
@@ -44,6 +44,11 @@ Future<UpdateInfo?> checkWorkshopUpdate(String modsDir) async {
 }
 
 const _kRepo = 'HuanYue-NoPrediction/ConstantPublisher';
+
+// 各平台的发行包文件名(自动更新据此选择资产)
+String _updateAsset() => Platform.isMacOS
+    ? 'DSTModPublisher-macos.zip'
+    : 'DSTModPublisher-windows.zip';
 
 Future<UpdateInfo?> checkGithubUpdate() async {
   return await _checkGithubAsset() ?? await _checkGithubApi();
@@ -64,7 +69,7 @@ Future<UpdateInfo?> _checkGithubAsset() async {
         version: v,
         source: 'github',
         downloadUrl:
-            'https://github.com/$_kRepo/releases/latest/download/DSTModPublisher-windows.zip');
+            'https://github.com/$_kRepo/releases/latest/download/${_updateAsset()}');
   } catch (_) {
     return null;
   } finally {
@@ -89,7 +94,7 @@ Future<UpdateInfo?> _checkGithubApi() async {
     if (tag.isEmpty || cmpVer(tag, kAppVersion) <= 0) return null;
     for (final a in (j['assets'] as List?) ?? const []) {
       final m = a as Map<String, dynamic>;
-      if (m['name'] == 'DSTModPublisher-windows.zip') {
+      if (m['name'] == _updateAsset()) {
         return UpdateInfo(
             version: tag,
             source: 'github',
@@ -136,6 +141,7 @@ Future<String?> downloadZip(String url,
 }
 
 Future<String?> applyUpdate(String zipPath, AppLocalizations t) async {
+  if (Platform.isMacOS) return _applyUpdateMacOS(zipPath, t);
   if (!Platform.isWindows) return t.errUpdateWinOnly;
   final updDir =
       Directory(p.join(Directory.systemTemp.path, 'dst_mod_publisher_update'));
@@ -170,6 +176,42 @@ Future<String?> applyUpdate(String zipPath, AppLocalizations t) async {
         installDir,
         p.join(installDir, 'dst_mod_publisher.exe'),
       ],
+      mode: ProcessStartMode.detached);
+  exit(0);
+}
+
+// macOS 自动更新:下载 DSTModPublisher-macos.zip,解压出 .app,由脱离进程的脚本
+// 等本进程退出后替换整个 .app 包、解隔离、ad-hoc 重签、重启。
+Future<String?> _applyUpdateMacOS(String zipPath, AppLocalizations t) async {
+  final updDir =
+      Directory(p.join(Directory.systemTemp.path, 'dst_mod_publisher_update'));
+  final staging = Directory(p.join(updDir.path, 'staging'));
+  if (await staging.exists()) await staging.delete(recursive: true);
+  await staging.create(recursive: true);
+
+  // ditto 解压:保留 .app 结构、可执行位与签名
+  final unzip = await Process.run('ditto', ['-x', '-k', zipPath, staging.path]);
+  if (unzip.exitCode != 0) return t.errUnzipFail('${unzip.stderr}');
+
+  final newApp = Directory(p.join(staging.path, 'dst_mod_publisher.app'));
+  if (!await newApp.exists()) return t.errZipNoExe;
+
+  // 当前 .app:resolvedExecutable = .../dst_mod_publisher.app/Contents/MacOS/dst_mod_publisher
+  final appDir = File(Platform.resolvedExecutable).parent.parent.parent.path;
+  if (!appDir.endsWith('.app')) return t.errZipNoExe; // 安全兜底,避免误删
+
+  // 替换脚本:等本进程退出 → 换包 → 解隔离 → ad-hoc 签名 → 重启
+  final script = File(p.join(updDir.path, 'apply.sh'));
+  await script.writeAsString('#!/bin/sh\n'
+      'while kill -0 $pid 2>/dev/null; do sleep 0.3; done\n'
+      'sleep 0.5\n'
+      'rm -rf "$appDir"\n'
+      '/usr/bin/ditto "${newApp.path}" "$appDir"\n'
+      'xattr -dr com.apple.quarantine "$appDir" 2>/dev/null\n'
+      'codesign --force --deep --sign - "$appDir" 2>/dev/null\n'
+      'open "$appDir"\n');
+  await Process.run('chmod', ['+x', script.path]);
+  await Process.start('/bin/sh', [script.path],
       mode: ProcessStartMode.detached);
   exit(0);
 }
