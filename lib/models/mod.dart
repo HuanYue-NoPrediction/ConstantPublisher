@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import '../services/lua_modinfo.dart';
+
 /// modinfo.lua 里解析出的字段(只读,真相源是文件本身)。
 class ModInfo {
   final String name;
@@ -24,6 +26,19 @@ class ModInfo {
   });
 
   bool get valid => name.isNotEmpty && version.isNotEmpty;
+
+  ModInfo mergeFrom(Map<String, String> m) => ModInfo(
+        name: name.isNotEmpty ? name : (m['name'] ?? ''),
+        author: author.isNotEmpty ? author : (m['author'] ?? ''),
+        version: version.isNotEmpty ? version : (m['version'] ?? ''),
+        description:
+            description.isNotEmpty ? description : (m['description'] ?? ''),
+        apiVersion: apiVersion.isNotEmpty
+            ? apiVersion
+            : (m['api_version_dst'] ?? m['api_version'] ?? ''),
+        clientOnly: clientOnly || m['client_only_mod'] == 'true',
+        serverOnly: serverOnly || m['server_only_mod'] == 'true',
+      );
 
   /// DST 类型标签:官方工具据 modinfo 布尔位生成,决定 mod 需装在客户端还是服务器。
   String get typeTag => clientOnly
@@ -137,8 +152,13 @@ class Mod {
     if (!await mi.exists()) return null;
     // 宽容解码:不少老模组的 modinfo.lua 是 GBK/ANSI,严格 UTF-8 会抛异常
     // 拖垮整个扫描;allowMalformed 保证不崩(ASCII 字段照常解析)。
-    final text = utf8.decode(await mi.readAsBytes(), allowMalformed: true);
-    final info = ModInfo.parse(text);
+    final bytes = await mi.readAsBytes();
+    final text = utf8.decode(bytes, allowMalformed: true);
+    var info = ModInfo.parse(text);
+    if (!info.valid) {
+      final ev = await evalModinfo(bytes, folderName: p.basename(d.path));
+      if (ev != null) info = info.mergeFrom(ev);
+    }
     var pub = DstPub();
     final pf = File(p.join(d.path, 'dstpub.json'));
     if (await pf.exists()) {
