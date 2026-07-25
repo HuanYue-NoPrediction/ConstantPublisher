@@ -159,14 +159,100 @@ class Mod {
   Future<void> writeVersion(String v) async {
     final bytes = await modinfoFile.readAsBytes();
     var raw = latin1.decode(bytes);
-    raw = raw.replaceFirst(
-      RegExp('(?<![\\w])version\\s*=\\s*("[^"]*"|\'[^\']*\')'),
-      'version = "$v"',
-    );
+    final quoted =
+        RegExp('(?<![\\w])version\\s*=\\s*("[^"]*"|\'[^\']*\')');
+    if (quoted.hasMatch(raw)) {
+      raw = raw.replaceFirst(quoted, 'version = "$v"');
+    } else {
+      raw = _rewriteExprVersion(raw, v) ?? raw;
+    }
     final out = latin1.encode(raw);
     await modinfoFile.writeAsBytes(out);
     info = ModInfo.parse(utf8.decode(out, allowMalformed: true));
   }
+}
+
+String? _rewriteExprVersion(String raw, String v) {
+  final head = RegExp('(?<![\\w])version\\s*=\\s*').firstMatch(raw);
+  if (head == null) return null;
+  final start = head.end;
+  if (start >= raw.length) return null;
+  final c = raw[start];
+  int? end;
+  if (c == '(' || c == '{') {
+    end = _scanBalanced(raw, start);
+  } else {
+    final num = RegExp(r'\d+(?:\.\d+)*').matchAsPrefix(raw, start);
+    if (num != null) end = num.end;
+  }
+  if (end == null) return null;
+  return '${raw.substring(0, head.start)}version = "$v"${raw.substring(end)}';
+}
+
+int? _scanBalanced(String s, int start) {
+  var depth = 0;
+  var j = start;
+  final n = s.length;
+  while (j < n) {
+    final c = s[j];
+    if (c == '"' || c == "'") {
+      final q = c;
+      j++;
+      while (j < n) {
+        if (s[j] == r'\') {
+          j += 2;
+          continue;
+        }
+        if (s[j] == q) {
+          j++;
+          break;
+        }
+        j++;
+      }
+      continue;
+    }
+    if (c == '(' || c == '{') {
+      depth++;
+      j++;
+      continue;
+    }
+    if (c == ')' || c == '}') {
+      depth--;
+      if (depth < 0) return null;
+      j++;
+      if (depth == 0) {
+        var k = j;
+        while (k < n && (s[k] == ' ' || s[k] == '\t')) {
+          k++;
+        }
+        if (k < n &&
+            (s[k] == '(' || s[k] == '{' || s[k] == '"' || s[k] == "'")) {
+          j = k;
+          if (s[k] == '"' || s[k] == "'") {
+            final q = s[k];
+            j++;
+            while (j < n) {
+              if (s[j] == r'\') {
+                j += 2;
+                continue;
+              }
+              if (s[j] == q) {
+                j++;
+                break;
+              }
+              j++;
+            }
+            return j;
+          }
+          continue;
+        }
+        return j;
+      }
+      continue;
+    }
+    j++;
+  }
+  return null;
 }
 
 /// 版本比较:按 . 和 - 切段,逐段数值比较,非数字段按 0。
