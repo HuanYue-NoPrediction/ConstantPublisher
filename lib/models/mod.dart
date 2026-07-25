@@ -157,13 +157,15 @@ class Mod {
 
   /// 把新版本号写回 modinfo.lua 的 version 字段。
   Future<void> writeVersion(String v) async {
-    var text = await modinfoFile.readAsString();
-    text = text.replaceFirst(
-      RegExp('version\\s*=\\s*("[^"]*"|\'[^\']*\')'),
+    final bytes = await modinfoFile.readAsBytes();
+    var raw = latin1.decode(bytes);
+    raw = raw.replaceFirst(
+      RegExp('(?<![\\w])version\\s*=\\s*("[^"]*"|\'[^\']*\')'),
       'version = "$v"',
     );
-    await modinfoFile.writeAsString(text);
-    info = ModInfo.parse(text);
+    final out = latin1.encode(raw);
+    await modinfoFile.writeAsBytes(out);
+    info = ModInfo.parse(utf8.decode(out, allowMalformed: true));
   }
 }
 
