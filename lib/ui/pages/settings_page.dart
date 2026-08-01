@@ -8,6 +8,7 @@ import '../../state/app_state.dart';
 import '../../theme.dart';
 import '../../version.dart';
 import '../widgets/bits.dart';
+import '../widgets/color_picker.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -26,6 +27,7 @@ class SettingsPage extends StatelessWidget {
             style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant)),
         const SizedBox(height: 18),
         SectionCard(
+          icon: Icons.bolt_outlined,
           title: t.setEngineTitle,
           subtitle: t.setEngineSubtitle,
           child: Column(
@@ -55,6 +57,7 @@ class SettingsPage extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         SectionCard(
+          icon: Icons.folder_outlined,
           title: t.setGeneral,
           child: _PathRow(
             label: t.setModsDir,
@@ -67,6 +70,7 @@ class SettingsPage extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         SectionCard(
+          icon: Icons.terminal_outlined,
           title: t.setCmdCard,
           child: Column(
             children: [
@@ -93,6 +97,7 @@ class SettingsPage extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         SectionCard(
+          icon: Icons.travel_explore_outlined,
           title: t.setInspect,
           subtitle: t.setInspectSubtitle,
           child: Column(
@@ -116,6 +121,7 @@ class SettingsPage extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         SectionCard(
+          icon: Icons.palette_outlined,
           title: t.setAppearance,
           child: Column(
             children: [
@@ -134,9 +140,15 @@ class SettingsPage extends StatelessWidget {
                                   fontSize: 13.5,
                                   fontWeight: FontWeight.w600)),
                           const SizedBox(height: 2),
-                          Text(_seedName(t, state.seed),
+                          Text(
+                              kSeeds.containsKey(state.seed)
+                                  ? _seedName(t, state.seed)
+                                  : state.seed.toUpperCase(),
                               style: TextStyle(
                                   fontSize: 11.5,
+                                  fontFamily: kSeeds.containsKey(state.seed)
+                                      ? null
+                                      : 'monospace',
                                   color: scheme.onSurfaceVariant)),
                         ],
                       ),
@@ -154,6 +166,20 @@ class SettingsPage extends StatelessWidget {
                             selected: state.seed == entry.key,
                             onTap: () => state.setSeed(entry.key),
                           ),
+                        _CustomSwatch(
+                          selected: !kSeeds.containsKey(state.seed),
+                          current: resolveSeed(state.seed),
+                          name: t.seedCustom,
+                          onPick: () async {
+                            final c = await showSeedPicker(
+                                context, resolveSeed(state.seed));
+                            if (c != null) {
+                              final hex =
+                                  '#${((c.r * 255).round() << 16 | (c.g * 255).round() << 8 | (c.b * 255).round()).toRadixString(16).padLeft(6, '0')}';
+                              await state.setSeed(hex);
+                            }
+                          },
+                        ),
                       ],
                     ),
                   ),
@@ -199,6 +225,7 @@ class SettingsPage extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         SectionCard(
+          icon: Icons.info_outline,
           title: t.setAbout,
           trailing: TextButton(
             onPressed: () async {
@@ -342,6 +369,78 @@ class _Swatch extends StatelessWidget {
             child: selected
                 ? const Icon(Icons.check, size: 15, color: Colors.white)
                 : null,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CustomSwatch extends StatelessWidget {
+  final bool selected;
+  final Color current;
+  final String name;
+  final VoidCallback onPick;
+
+  const _CustomSwatch({
+    required this.selected,
+    required this.current,
+    required this.name,
+    required this.onPick,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Tooltip(
+      message: name,
+      waitDuration: const Duration(milliseconds: 400),
+      child: InkResponse(
+        onTap: onPick,
+        radius: 26,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          width: 38,
+          height: 38,
+          padding: const EdgeInsets.all(3.5),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: selected ? current : Colors.transparent,
+              width: 2,
+            ),
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                  color: scheme.outlineVariant.withValues(alpha: .6)),
+              gradient: const SweepGradient(
+                colors: [
+                  Color(0xFFE53935),
+                  Color(0xFFFFB300),
+                  Color(0xFF43A047),
+                  Color(0xFF00ACC1),
+                  Color(0xFF3949AB),
+                  Color(0xFF8E24AA),
+                  Color(0xFFE53935),
+                ],
+              ),
+              boxShadow: selected
+                  ? [
+                      BoxShadow(
+                        color: current.withValues(alpha: .45),
+                        blurRadius: 8,
+                        spreadRadius: 1,
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Icon(
+              selected ? Icons.check : Icons.add,
+              size: 15,
+              color: Colors.white,
+            ),
           ),
         ),
       ),

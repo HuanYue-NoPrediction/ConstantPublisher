@@ -29,8 +29,18 @@ const List<String> _fallback = [
   'PingFang SC',
 ];
 
+Color? parseSeedHex(String v) {
+  final s = v.startsWith('#') ? v.substring(1) : v;
+  if (s.length != 6) return null;
+  final n = int.tryParse(s, radix: 16);
+  return n == null ? null : Color(0xFF000000 | n);
+}
+
+Color resolveSeed(String seedKey) =>
+    kSeeds[seedKey] ?? parseSeedHex(seedKey) ?? kSeeds['purple']!;
+
 ThemeData buildTheme(String seedKey, Brightness brightness) {
-  final seed = kSeeds[seedKey] ?? kSeeds['purple']!;
+  final seed = resolveSeed(seedKey);
   final scheme = ColorScheme.fromSeed(seedColor: seed, brightness: brightness);
   // 全局默认正文字体(含内联 TextStyle 继承)
   final base = ThemeData(

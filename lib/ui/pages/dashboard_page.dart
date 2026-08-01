@@ -52,6 +52,7 @@ class _DashboardPageState extends State<DashboardPage> {
         const SizedBox(height: 18),
         if (state.update != null) ...[
           SectionCard(
+            icon: Icons.system_update_alt,
             title: t.updateFoundTitle(state.update!.version),
             subtitle: t.updateFoundSubtitle(
                 state.srcName(state.update!.source), kAppVersion),
@@ -119,6 +120,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
         // 公告栏:饥荒官方动态(游戏更新往往意味着模组要适配)
         SectionCard(
+          icon: Icons.campaign_outlined,
           title: t.newsTitle,
           subtitle: t.newsSubtitle,
           child: state.news.isEmpty
@@ -159,6 +161,7 @@ class _DashboardPageState extends State<DashboardPage> {
         const SizedBox(height: 14),
 
         SectionCard(
+          icon: Icons.groups_2_outlined,
           title: t.groupsTitle,
           subtitle: t.groupsSubtitle,
           child: Wrap(
@@ -221,6 +224,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
         if (items.isEmpty)
           SectionCard(
+            icon: Icons.leaderboard_outlined,
             title: t.rankTitle,
             child: Text(
               state.steamReady ? t.rankHintReady : t.rankHintNoSteam,
@@ -270,6 +274,7 @@ class _DashboardPageState extends State<DashboardPage> {
         if (state.busy && state.progress != null) ...[
           const SizedBox(height: 14),
           SectionCard(
+            icon: Icons.cloud_upload_outlined,
             title: t.publishingTitle,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

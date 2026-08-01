@@ -86,6 +86,7 @@ class _WorkshopPageState extends State<WorkshopPage> {
         ),
         const SizedBox(height: 16),
         SectionCard(
+          icon: Icons.inventory_2_outlined,
           title: AppLocalizations.of(context).wpCardTitle,
           child: state.remoteItems.isEmpty
               ? Text(AppLocalizations.of(context).wpEmpty,

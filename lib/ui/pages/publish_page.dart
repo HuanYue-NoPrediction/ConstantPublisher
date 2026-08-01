@@ -868,6 +868,7 @@ class _PublishPageState extends State<PublishPage> {
     return Column(
       children: [
         SectionCard(
+          icon: Icons.numbers_outlined,
           title: t.verTitle,
           child: Row(
             children: [
@@ -915,6 +916,7 @@ class _PublishPageState extends State<PublishPage> {
         ),
         const SizedBox(height: 14),
         SectionCard(
+          icon: Icons.storefront_outlined,
           title: t.wsPageTitle,
           subtitle: t.wsPageSubtitle,
           child: Column(
@@ -992,10 +994,9 @@ class _PublishPageState extends State<PublishPage> {
                             color: scheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Wrap(
-                            spacing: 0,
-                            runSpacing: 2,
-                            crossAxisAlignment: WrapCrossAlignment.center,
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
                             children: [
                               _bbIcon(Icons.format_bold, t.bbBold, '[b]',
                                   '[/b]'),
@@ -1044,6 +1045,7 @@ class _PublishPageState extends State<PublishPage> {
                                   '[hr][/hr]\n', ''),
                             ],
                           ),
+                          ),
                         ),
                         const SizedBox(height: 8),
                         TextField(
@@ -1062,6 +1064,7 @@ class _PublishPageState extends State<PublishPage> {
         ),
         const SizedBox(height: 14),
         SectionCard(
+          icon: Icons.history_edu_outlined,
           title: t.noteTitle,
           subtitle: t.noteSubtitle,
           child: TextField(
@@ -1075,6 +1078,7 @@ class _PublishPageState extends State<PublishPage> {
         ),
         const SizedBox(height: 14),
         SectionCard(
+          icon: Icons.visibility_outlined,
           title: t.visTitle,
           child: SegmentedButton<int>(
             segments: [
@@ -1092,6 +1096,7 @@ class _PublishPageState extends State<PublishPage> {
         ),
         const SizedBox(height: 14),
         SectionCard(
+          icon: Icons.sell_outlined,
           title: t.tagsTitle,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1188,8 +1193,8 @@ class _PublishPageState extends State<PublishPage> {
         borderRadius: BorderRadius.circular(6),
         onTap: () => _wrapSel(open, close),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6),
-          child: Icon(icon, size: 17),
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 6),
+          child: Icon(icon, size: 16),
         ),
       ),
     );
@@ -1202,10 +1207,10 @@ class _PublishPageState extends State<PublishPage> {
         borderRadius: BorderRadius.circular(6),
         onTap: () => _wrapSel(open, close),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 7),
           child: Text(label,
               style: const TextStyle(
-                  fontSize: 12.5, fontWeight: FontWeight.w700, height: 1.1)),
+                  fontSize: 12, fontWeight: FontWeight.w700, height: 1.1)),
         ),
       ),
     );
@@ -1214,8 +1219,8 @@ class _PublishPageState extends State<PublishPage> {
   Widget _bbDiv() {
     return Container(
       width: 1,
-      height: 16,
-      margin: const EdgeInsets.symmetric(horizontal: 5),
+      height: 15,
+      margin: const EdgeInsets.symmetric(horizontal: 4),
       color: Theme.of(context).colorScheme.outlineVariant,
     );
   }
@@ -1231,6 +1236,7 @@ class _PublishPageState extends State<PublishPage> {
     return Column(
       children: [
         SectionCard(
+          icon: Icons.image_outlined,
           title: t.previewTitle,
           subtitle: t.previewSubtitle,
           trailing: TextButton(
@@ -1345,6 +1351,7 @@ class _PublishPageState extends State<PublishPage> {
         ),
         const SizedBox(height: 14),
         SectionCard(
+          icon: Icons.folder_zip_outlined,
           title: t.uploadTitle,
           subtitle: t.uploadSubtitle,
           trailing: IconButton(
@@ -1400,6 +1407,7 @@ class _PublishPageState extends State<PublishPage> {
         ),
         const SizedBox(height: 14),
         SectionCard(
+          icon: Icons.rocket_launch_outlined,
           title: t.publishCard,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,

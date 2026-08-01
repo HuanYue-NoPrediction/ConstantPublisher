@@ -44,6 +44,7 @@ class SectionCard extends StatelessWidget {
   final String? subtitle;
   final Widget child;
   final Widget? trailing;
+  final IconData? icon;
 
   const SectionCard({
     super.key,
@@ -51,45 +52,49 @@ class SectionCard extends StatelessWidget {
     this.subtitle,
     required this.child,
     this.trailing,
+    this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 15, 18, 13),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Container(
-                  width: 3,
-                  height: subtitle == null ? 15 : 31,
-                  margin: const EdgeInsets.only(top: 2, right: 11),
-                  decoration: BoxDecoration(
-                    color: scheme.primary.withValues(alpha: .85),
-                    borderRadius: BorderRadius.circular(2),
+                if (icon != null) ...[
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: scheme.primary.withValues(alpha: .11),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Icon(icon, size: 16, color: scheme.primary),
                   ),
-                ),
+                  const SizedBox(width: 11),
+                ],
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(title,
                           style: const TextStyle(
-                              fontSize: 14.5,
+                              fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              letterSpacing: .2,
-                              height: 1.25)),
+                              letterSpacing: .1,
+                              height: 1.3)),
                       if (subtitle != null)
                         Padding(
-                          padding: const EdgeInsets.only(top: 3),
+                          padding: const EdgeInsets.only(top: 2),
                           child: Text(subtitle!,
                               style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 11.5,
                                   height: 1.35,
                                   color: scheme.onSurfaceVariant)),
                         ),
@@ -102,13 +107,10 @@ class SectionCard extends StatelessWidget {
                 ],
               ],
             ),
-          ),
-          Divider(height: 1, color: scheme.outlineVariant),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 15, 18, 17),
-            child: child,
-          ),
-        ],
+            const SizedBox(height: 14),
+            child,
+          ],
+        ),
       ),
     );
   }
