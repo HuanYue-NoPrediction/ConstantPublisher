@@ -22,8 +22,6 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  String _rankQ = '';
-
   @override
   void initState() {
     super.initState();
@@ -31,7 +29,9 @@ class _DashboardPageState extends State<DashboardPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final state = context.read<AppState>();
       if (state.remoteItems.isEmpty && state.steamReady && !state.busy) {
-        state.refreshRemote();
+        state.refreshRemote().then((_) => state.fetchTrending());
+      } else if (state.trending.isEmpty && state.steamReady && !state.busy) {
+        state.fetchTrending();
       }
     });
   }
@@ -42,8 +42,6 @@ class _DashboardPageState extends State<DashboardPage> {
     final scheme = Theme.of(context).colorScheme;
     final sem = SemanticColors.of(context);
     final t = AppLocalizations.of(context);
-    final items = state.remoteItems;
-    final top = [...items]..sort((a, b) => b.subs.compareTo(a.subs));
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 18, 24, 32),
@@ -107,7 +105,7 @@ class _DashboardPageState extends State<DashboardPage> {
               const SizedBox(width: 10),
               OutlinedButton.icon(
                 onPressed: () {
-                  state.refreshRemote();
+                  state.refreshRemote().then((_) => state.fetchTrending());
                   if (state.news.isEmpty) state.fetchNews();
                 },
                 icon: const Icon(Icons.refresh),
@@ -222,54 +220,22 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
         const SizedBox(height: 14),
 
-        if (items.isEmpty)
-          SectionCard(
-            icon: Icons.leaderboard_outlined,
-            title: t.rankTitle,
-            child: Text(
-              state.steamReady ? t.rankHintReady : t.rankHintNoSteam,
-              style: TextStyle(color: scheme.onSurfaceVariant),
-            ),
-          )
-        else
-          SectionCard(
-            title: t.rankTitle,
-            subtitle: t.rankSubtitle('${items.length}'),
-            trailing: SizedBox(
-              width: 220,
-              child: TextField(
-                onChanged: (v) =>
-                    setState(() => _rankQ = v.trim().toLowerCase()),
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.search, size: 17),
-                  hintText: t.rankSearchHint,
-                  isDense: true,
-                  border: const OutlineInputBorder(),
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        SectionCard(
+          icon: Icons.local_fire_department_outlined,
+          title: t.trendTitle,
+          hint: t.trendHint,
+          child: state.trending.isEmpty
+              ? Text(
+                  state.steamReady ? t.trendLoading : t.rankHintNoSteam,
+                  style: TextStyle(color: scheme.onSurfaceVariant),
+                )
+              : Column(
+                  children: [
+                    for (final (i, it) in state.trending.indexed)
+                      _TrendRow(index: i + 1, item: it, scheme: scheme),
+                  ],
                 ),
-                style: const TextStyle(fontSize: 13),
-              ),
-            ),
-            child: Builder(builder: (_) {
-              final filtered = [
-                for (final it in top)
-                  if (_rankQ.isEmpty ||
-                      it.title.toLowerCase().contains(_rankQ))
-                    it,
-              ];
-              if (filtered.isEmpty) {
-                return Text(t.rankNoMatch,
-                    style: TextStyle(color: scheme.onSurfaceVariant));
-              }
-              return Column(
-                children: [
-                  for (final it in filtered)
-                    _RankRow(item: it, scheme: scheme, sem: sem),
-                ],
-              );
-            }),
-          ),
+        ),
 
         if (state.busy && state.progress != null) ...[
           const SizedBox(height: 14),
@@ -308,12 +274,12 @@ String _ago(AppLocalizations t, DateTime time) {
   return t.agoJustNow;
 }
 
-class _RankRow extends StatelessWidget {
+class _TrendRow extends StatelessWidget {
+  final int index;
   final WorkshopItemRemote item;
   final ColorScheme scheme;
-  final SemanticColors sem;
-  const _RankRow(
-      {required this.item, required this.scheme, required this.sem});
+  const _TrendRow(
+      {required this.index, required this.item, required this.scheme});
 
   @override
   Widget build(BuildContext context) {
@@ -321,54 +287,68 @@ class _RankRow extends StatelessWidget {
         fontSize: 12,
         color: scheme.onSurfaceVariant,
         fontFeatures: const [FontFeature.tabularFigures()]);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(7),
-            child: item.previewUrl.isEmpty
-                ? Container(
-                    width: 38,
-                    height: 38,
-                    color: scheme.surfaceContainerHighest,
-                    child: Icon(Icons.cloud_outlined,
-                        size: 18, color: scheme.onSurfaceVariant))
-                : Image.network(item.previewUrl,
-                    width: 38,
-                    height: 38,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                        width: 38,
-                        height: 38,
-                        color: scheme.surfaceContainerHighest)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(item.title,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontSize: 13.5, fontWeight: FontWeight.w600)),
-          ),
-          const SizedBox(width: 10),
-          _stat(Icons.people_alt_outlined, _fmt(item.subs), dim),
-          const SizedBox(width: 12),
-          _stat(Icons.mode_comment_outlined, _fmt(item.comments), dim),
-          const SizedBox(width: 12),
-          if (item.votesUp + item.votesDown > 0)
-            _stat(
-                Icons.thumb_up_outlined,
-                '${(item.votesUp / (item.votesUp + item.votesDown) * 100).round()}%',
-                dim),
-          const SizedBox(width: 4),
-          IconButton(
-            tooltip: AppLocalizations.of(context).tooltipComments,
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.open_in_new, size: 16),
-            onPressed: () => openSteamPage(
-                'https://steamcommunity.com/sharedfiles/filedetails/comments/${item.id}'),
-          ),
-        ],
+    final hot = index <= 3;
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () => openSteamPage(
+          'https://steamcommunity.com/sharedfiles/filedetails/?id=${item.id}'),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 26,
+              child: Text(
+                '$index',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: hot ? 15 : 12.5,
+                  fontWeight: hot ? FontWeight.w800 : FontWeight.w500,
+                  fontStyle: FontStyle.italic,
+                  color: hot ? scheme.primary : scheme.onSurfaceVariant,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(7),
+              child: item.previewUrl.isEmpty
+                  ? Container(
+                      width: 38,
+                      height: 38,
+                      color: scheme.surfaceContainerHighest,
+                      child: Icon(Icons.cloud_outlined,
+                          size: 18, color: scheme.onSurfaceVariant))
+                  : Image.network(item.previewUrl,
+                      width: 38,
+                      height: 38,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                          width: 38,
+                          height: 38,
+                          color: scheme.surfaceContainerHighest)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(item.title,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontSize: 13.5, fontWeight: FontWeight.w600)),
+            ),
+            const SizedBox(width: 10),
+            _stat(Icons.people_alt_outlined, _fmt(item.subs), dim),
+            const SizedBox(width: 12),
+            if (item.votesUp + item.votesDown > 0)
+              _stat(
+                  Icons.thumb_up_outlined,
+                  '${(item.votesUp / (item.votesUp + item.votesDown) * 100).round()}%',
+                  dim),
+            const SizedBox(width: 6),
+            Icon(Icons.chevron_right,
+                size: 16, color: scheme.onSurfaceVariant),
+          ],
+        ),
       ),
     );
   }

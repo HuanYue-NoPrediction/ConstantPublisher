@@ -96,7 +96,7 @@ class AppState extends ChangeNotifier {
     if (modsDir.isNotEmpty) await scanMods();
     if (engine == 'steamworks' && steamReady) {
       // 后台预拉名下条目:发布页封面对比、工坊页、绑定下拉都依赖它
-      unawaited(refreshRemote());
+      unawaited(refreshRemote().then((_) => fetchTrending()));
     }
     unawaited(checkUpdates());
     unawaited(fetchNews());
@@ -592,6 +592,66 @@ class AppState extends ChangeNotifier {
       await _refreshRemoteInner();
     } finally {
       _refreshing = false;
+    }
+  }
+
+  List<WorkshopItemRemote> trending = [];
+  bool _trendLoading = false;
+
+  Future<void> fetchTrending() async {
+    if (_trendLoading) return;
+    if (engine != 'steamworks' || !File(helperPath).existsSync()) return;
+    _trendLoading = true;
+    Process? proc;
+    try {
+      proc = await Process.start(helperPath, ['trend', '322330', '7']);
+      await proc.stdin.close();
+      final p = proc;
+      final killTimer = Timer(const Duration(seconds: 40), () => p.kill());
+      unawaited(proc.stderr.drain());
+      final items = <WorkshopItemRemote>[];
+      var ok = false;
+      await for (final line in proc.stdout
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())) {
+        try {
+          final j = jsonDecode(line) as Map<String, dynamic>;
+          if (j['event'] == 'item') {
+            items.add(WorkshopItemRemote(
+              id: j['id'].toString(),
+              title: j['title'] as String? ?? l10n.untitledItem,
+              subs: (j['subs'] as num?)?.toInt() ?? 0,
+              favorites: (j['favorites'] as num?)?.toInt() ?? 0,
+              comments: (j['comments'] as num?)?.toInt() ?? 0,
+              votesUp: (j['votesUp'] as num?)?.toInt() ?? 0,
+              votesDown: (j['votesDown'] as num?)?.toInt() ?? 0,
+              score: (j['score'] as num?)?.toDouble() ?? 0,
+              updated: j['updated'] != null && (j['updated'] as num) > 0
+                  ? DateTime.fromMillisecondsSinceEpoch(
+                      (j['updated'] as num).toInt() * 1000)
+                  : null,
+              tags: (j['tags'] as String? ?? '')
+                  .split(',')
+                  .map((t) => t.trim())
+                  .where((t) => t.isNotEmpty)
+                  .toList(),
+              previewUrl: j['preview'] as String? ?? '',
+            ));
+          } else if (j['event'] == 'result') {
+            ok = j['ok'] == true;
+          }
+        } catch (_) {}
+      }
+      await proc.exitCode;
+      killTimer.cancel();
+      if (ok && items.isNotEmpty) {
+        trending = items;
+        notifyListeners();
+      }
+    } catch (_) {
+      proc?.kill();
+    } finally {
+      _trendLoading = false;
     }
   }
 

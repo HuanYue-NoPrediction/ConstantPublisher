@@ -108,6 +108,28 @@ internal static class Program
             return 0;
         }
 
+        if (args.Length >= 1 && args[0] == "trend")
+        {
+            var trendAppId = args.Length >= 2 && uint.TryParse(args[1], out var ta) ? ta : 322330u;
+            var trendDays = args.Length >= 3 && uint.TryParse(args[2], out var td) ? td : 7u;
+            Environment.SetEnvironmentVariable("SteamAppId", LaunchAppId.ToString());
+            Environment.SetEnvironmentVariable("SteamGameId", LaunchAppId.ToString());
+            if (!TryInit(LaunchAppId)) return 0;
+            try
+            {
+                return RunTrend(new AppId_t(trendAppId), trendDays);
+            }
+            catch (Exception e)
+            {
+                Fail("助手内部异常: " + e.Message, 0, "internal", e.Message);
+                return 0;
+            }
+            finally
+            {
+                SteamAPI.Shutdown();
+            }
+        }
+
         // 模式二:list <appid> —— 借 Steam 会话列出当前账号名下的工坊条目,零配置
         if (args.Length >= 1 && args[0] == "list")
         {
@@ -486,6 +508,76 @@ internal static class Program
             page++;
         }
         Emit(new { @event = "result", ok = true, count = total });
+        return 0;
+    }
+
+    private static int RunTrend(AppId_t appId, uint days)
+    {
+        foreach (var creator in new[] { appId, new AppId_t(LaunchAppId) })
+        {
+            var q = SteamUGC.CreateQueryAllUGCRequest(
+                EUGCQuery.k_EUGCQuery_RankedByTrend,
+                EUGCMatchingUGCType.k_EUGCMatchingUGCType_Items_ReadyToUse,
+                creator, appId, 1);
+            if (q.m_UGCQueryHandle == ulong.MaxValue) continue;
+            SteamUGC.SetRankedByTrendDays(q, days);
+            _queryDone = false;
+            _ioFailure = false;
+            _queryCR = CallResult<SteamUGCQueryCompleted_t>.Create(OnQuery);
+            _queryCR.Set(SteamUGC.SendQueryUGCRequest(q));
+            if (!Pump(() => _queryDone, 30))
+            {
+                SteamUGC.ReleaseQueryUGCRequest(q);
+                continue;
+            }
+            if (_ioFailure || _queryResult.m_eResult != EResult.k_EResultOK)
+            {
+                SteamUGC.ReleaseQueryUGCRequest(q);
+                continue;
+            }
+            var n = _queryResult.m_unNumResultsReturned;
+            if (n == 0)
+            {
+                SteamUGC.ReleaseQueryUGCRequest(q);
+                continue;
+            }
+            var total = 0;
+            for (uint i = 0; i < n && total < 20; i++)
+            {
+                if (!SteamUGC.GetQueryUGCResult(_queryResult.m_handle, i, out SteamUGCDetails_t d))
+                {
+                    continue;
+                }
+                ulong Stat(EItemStatistic s)
+                {
+                    SteamUGC.GetQueryUGCStatistic(
+                        _queryResult.m_handle, i, s, out ulong v);
+                    return v;
+                }
+                SteamUGC.GetQueryUGCPreviewURL(_queryResult.m_handle, i,
+                    out string previewUrl, 1024);
+                Emit(new
+                {
+                    @event = "item",
+                    id = d.m_nPublishedFileId.m_PublishedFileId.ToString(),
+                    title = d.m_rgchTitle,
+                    subs = Stat(EItemStatistic.k_EItemStatistic_NumSubscriptions),
+                    favorites = Stat(EItemStatistic.k_EItemStatistic_NumFavorites),
+                    comments = Stat(EItemStatistic.k_EItemStatistic_NumComments),
+                    votesUp = d.m_unVotesUp,
+                    votesDown = d.m_unVotesDown,
+                    score = d.m_flScore,
+                    updated = d.m_rtimeUpdated,
+                    tags = d.m_rgchTags,
+                    preview = previewUrl,
+                });
+                total++;
+            }
+            SteamUGC.ReleaseQueryUGCRequest(q);
+            Emit(new { @event = "result", ok = true, count = total });
+            return 0;
+        }
+        Fail("QueryAllUGC 失败", (int)_queryResult.m_eResult, "query_fail");
         return 0;
     }
 
