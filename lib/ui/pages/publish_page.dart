@@ -424,6 +424,33 @@ class _PublishPageState extends State<PublishPage> {
     }
   }
 
+  Future<void> _discardDraft(Mod mod, WorkshopItemRemote? target) async {
+    final t = AppLocalizations.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(t.draftDiscard),
+        content: Text(t.draftDiscardConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(t.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(t.draftDiscard),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    _debounce?.cancel();
+    await DraftStore.clear(mod.path, target?.id);
+    if (!mounted) return;
+    await _loadFor(mod, target);
+    if (mounted) toast(context, t.draftDiscarded);
+  }
+
   void _onVersionChanged(String v) {
     _saveDraftSoon();
   }
@@ -796,6 +823,19 @@ class _PublishPageState extends State<PublishPage> {
             const SizedBox(width: 6),
             Text(_draftStamp ?? t.pubDraftHint,
                 style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
+            if (_draftStamp != null) ...[
+              const SizedBox(width: 10),
+              TextButton.icon(
+                onPressed: () => _discardDraft(mod, target),
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  foregroundColor: scheme.error,
+                ),
+                icon: const Icon(Icons.delete_outline, size: 15),
+                label: Text(t.draftDiscard,
+                    style: const TextStyle(fontSize: 12)),
+              ),
+            ],
           ]),
         ),
 
