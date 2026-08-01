@@ -1000,9 +1000,9 @@ class _PublishPageState extends State<PublishPage> {
               _descPreview
                   ? Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.all(14),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: scheme.surfaceContainerHighest,
+                        color: kSteamPreviewBg,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: BBCodePreview(_descCtrl.text),

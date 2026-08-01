@@ -2,13 +2,25 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/gen/app_localizations.dart';
 
+const kSteamPreviewBg = Color(0xFF1B2838);
+const _kBody = Color(0xFFACB2B8);
+const _kWhite = Color(0xFFF3F3F3);
+const _kLink = Color(0xFF66C0F4);
+const _kLine = Color(0xFF4D5766);
+const _kQuoteBg = Color(0x33000000);
+const _kCodeBg = Color(0x4D000000);
+const List<String> _kFonts = [
+  'Segoe UI',
+  'Microsoft YaHei UI',
+  'Microsoft YaHei',
+];
+
 class BBCodePreview extends StatelessWidget {
   final String source;
   const BBCodePreview(this.source, {super.key});
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final blocks = <Widget>[];
     final text = source.replaceAll('\r\n', '\n');
     final pattern = RegExp(
@@ -28,11 +40,16 @@ class BBCodePreview extends StatelessWidget {
       }
       if (m.group(1) != null) {
         final level = m.group(1)!.toLowerCase();
-        final size = level == 'h1' ? 17.0 : (level == 'h2' ? 15.5 : 14.0);
+        final size = level == 'h1' ? 21.0 : (level == 'h2' ? 17.5 : 15.0);
         blocks.add(Padding(
-          padding: const EdgeInsets.only(top: 4, bottom: 6),
+          padding: const EdgeInsets.only(top: 8, bottom: 6),
           child: Text(m.group(2)!.trim(),
-              style: TextStyle(fontSize: size, fontWeight: FontWeight.w700)),
+              style: TextStyle(
+                  fontSize: size,
+                  fontWeight: level == 'h3' ? FontWeight.w600 : FontWeight.w500,
+                  letterSpacing: .2,
+                  fontFamilyFallback: _kFonts,
+                  color: _kWhite)),
         ));
       } else if (m.group(3) != null) {
         final ordered = m.group(3)!.toLowerCase() == 'olist';
@@ -43,9 +60,12 @@ class BBCodePreview extends StatelessWidget {
           n++;
           blocks.add(Padding(
             padding: const EdgeInsets.only(left: 6, bottom: 2),
-            child:
-                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              SizedBox(width: 24, child: Text(ordered ? '$n.' : '•')),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              SizedBox(
+                  width: 24,
+                  child: Text(ordered ? '$n.' : '•',
+                      style: const TextStyle(
+                          fontSize: 13.5, height: 1.6, color: _kBody))),
               Expanded(child: _inline(context, t)),
             ]),
           ));
@@ -56,12 +76,16 @@ class BBCodePreview extends StatelessWidget {
           margin: const EdgeInsets.symmetric(vertical: 4),
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: scheme.surface,
-            border: Border.all(color: scheme.outlineVariant),
-            borderRadius: BorderRadius.circular(8),
+            color: _kCodeBg,
+            border: Border.all(color: _kLine),
+            borderRadius: BorderRadius.circular(4),
           ),
           child: Text(m.group(5)!.trim(),
-              style: const TextStyle(fontFamily: 'monospace', fontSize: 12.5)),
+              style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 12.5,
+                  height: 1.5,
+                  color: Color(0xFF9BB1C8))),
         ));
       } else if (m.group(7) != null) {
         blocks.add(Container(
@@ -69,8 +93,9 @@ class BBCodePreview extends StatelessWidget {
           margin: const EdgeInsets.symmetric(vertical: 4),
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
           decoration: BoxDecoration(
-            color: scheme.surface,
-            border: Border(left: BorderSide(color: scheme.primary, width: 3)),
+            color: _kQuoteBg,
+            border: Border.all(color: _kLine),
+            borderRadius: BorderRadius.circular(3),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,10 +106,10 @@ class BBCodePreview extends StatelessWidget {
                   child: Text(
                       AppLocalizations.of(context)
                           .bbPrevQuoteBy('${m.group(6)}'),
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: scheme.onSurfaceVariant)),
+                      style: const TextStyle(
+                          fontSize: 11.5,
+                          fontStyle: FontStyle.italic,
+                          color: Color(0xFF8B98A6))),
                 ),
               _inline(context, m.group(7)!.trim()),
             ],
@@ -99,10 +124,11 @@ class BBCodePreview extends StatelessWidget {
         blocks.add(Padding(
           padding: const EdgeInsets.only(bottom: 4),
           child: Text(m.group(10)!,
-              style: const TextStyle(fontSize: 13.5, height: 1.55)),
+              style:
+                  const TextStyle(fontSize: 13.5, height: 1.6, color: _kBody)),
         ));
       } else {
-        blocks.add(Divider(color: scheme.outlineVariant));
+        blocks.add(const Divider(color: _kLine, height: 22, thickness: 1));
       }
       cursor = m.end;
     }
@@ -115,7 +141,6 @@ class BBCodePreview extends StatelessWidget {
   }
 
   Widget _table(BuildContext context, String body) {
-    final scheme = Theme.of(context).colorScheme;
     final trRe = RegExp(r'\[tr\]([\s\S]*?)\[\/tr\]', caseSensitive: false);
     final cellRe =
         RegExp(r'\[(th|td)\]([\s\S]*?)\[\/\1\]', caseSensitive: false);
@@ -134,7 +159,7 @@ class BBCodePreview extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: Table(
-        border: TableBorder.all(color: scheme.outlineVariant),
+        border: TableBorder.all(color: _kLine),
         defaultColumnWidth: const IntrinsicColumnWidth(),
         defaultVerticalAlignment: TableCellVerticalAlignment.middle,
         children: [
@@ -148,8 +173,9 @@ class BBCodePreview extends StatelessWidget {
                       ? Text(cells[i].$2,
                           style: TextStyle(
                               fontSize: 12.5,
+                              color: cells[i].$1 == 'th' ? _kWhite : _kBody,
                               fontWeight: cells[i].$1 == 'th'
-                                  ? FontWeight.w700
+                                  ? FontWeight.w600
                                   : FontWeight.w400))
                       : const SizedBox.shrink(),
                 ),
@@ -164,7 +190,7 @@ class BBCodePreview extends StatelessWidget {
       return _placeholder(
           context, AppLocalizations.of(context).bbPrevImage(url));
     }
-    final scheme = Theme.of(context).colorScheme;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: ConstrainedBox(
@@ -180,12 +206,12 @@ class BBCodePreview extends StatelessWidget {
                 : Container(
                     width: 120,
                     height: 60,
-                    color: scheme.surfaceContainerHighest,
-                    child: Icon(Icons.image_outlined,
-                        size: 20, color: scheme.onSurfaceVariant),
+                    color: const Color(0xFF2A3A4E),
+                    child: const Icon(Icons.image_outlined,
+                        size: 20, color: _kBody),
                   ),
-            errorBuilder: (_, __, ___) => _placeholder(context,
-                AppLocalizations.of(context).bbPrevImage(url)),
+            errorBuilder: (_, __, ___) => _placeholder(
+                context, AppLocalizations.of(context).bbPrevImage(url)),
           ),
         ),
       ),
@@ -193,19 +219,16 @@ class BBCodePreview extends StatelessWidget {
   }
 
   Widget _placeholder(BuildContext context, String label) {
-    final scheme = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        border: Border.all(color: scheme.outlineVariant),
-        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: _kLine),
+        borderRadius: BorderRadius.circular(4),
       ),
       child: Text(label,
-          style: TextStyle(
-              fontSize: 11.5,
-              fontFamily: 'monospace',
-              color: scheme.onSurfaceVariant)),
+          style: const TextStyle(
+              fontSize: 11.5, fontFamily: 'monospace', color: _kBody)),
     );
   }
 
@@ -220,20 +243,31 @@ class BBCodePreview extends StatelessWidget {
 
   Widget _inline(BuildContext context, String text) {
     return Text.rich(TextSpan(children: _spans(context, text)),
-        style: const TextStyle(fontSize: 13.5, height: 1.55));
+        style: const TextStyle(
+            fontSize: 13.5,
+            height: 1.6,
+            color: _kBody,
+            fontFamilyFallback: _kFonts));
   }
 
   List<InlineSpan> _spans(BuildContext context, String text) {
-    final scheme = Theme.of(context).colorScheme;
     final tags = <(RegExp, TextStyle Function())>[
-      (RegExp(r'\[b\]([\s\S]*?)\[\/b\]', caseSensitive: false),
-          () => const TextStyle(fontWeight: FontWeight.w700)),
-      (RegExp(r'\[i\]([\s\S]*?)\[\/i\]', caseSensitive: false),
-          () => const TextStyle(fontStyle: FontStyle.italic)),
-      (RegExp(r'\[u\]([\s\S]*?)\[\/u\]', caseSensitive: false),
-          () => const TextStyle(decoration: TextDecoration.underline)),
-      (RegExp(r'\[strike\]([\s\S]*?)\[\/strike\]', caseSensitive: false),
-          () => const TextStyle(decoration: TextDecoration.lineThrough)),
+      (
+        RegExp(r'\[b\]([\s\S]*?)\[\/b\]', caseSensitive: false),
+        () => const TextStyle(fontWeight: FontWeight.w700, color: _kWhite)
+      ),
+      (
+        RegExp(r'\[i\]([\s\S]*?)\[\/i\]', caseSensitive: false),
+        () => const TextStyle(fontStyle: FontStyle.italic)
+      ),
+      (
+        RegExp(r'\[u\]([\s\S]*?)\[\/u\]', caseSensitive: false),
+        () => const TextStyle(decoration: TextDecoration.underline)
+      ),
+      (
+        RegExp(r'\[strike\]([\s\S]*?)\[\/strike\]', caseSensitive: false),
+        () => const TextStyle(decoration: TextDecoration.lineThrough)
+      ),
     ];
 
     final url =
@@ -271,28 +305,59 @@ class BBCodePreview extends StatelessWidget {
     switch (kind) {
       case 'style':
         spans.add(TextSpan(
-            style: style!(),
-            children: _spans(context, first.group(1) ?? '')));
+            style: style!(), children: _spans(context, first.group(1) ?? '')));
       case 'url':
         spans.add(TextSpan(
-            style: TextStyle(
-                color: scheme.primary,
+            style: const TextStyle(
+                color: _kLink,
                 decoration: TextDecoration.underline,
-                decorationColor: scheme.primary),
+                decorationColor: _kLink),
             children: _spans(context, first.group(2) ?? '')));
       case 'img':
         spans.add(WidgetSpan(
           child: _netImage(context, (first.group(1) ?? '').trim()),
         ));
       case 'spoiler':
-        spans.add(TextSpan(
-            text: first.group(1) ?? '',
-            style: TextStyle(
-                backgroundColor: scheme.onSurface,
-                color: scheme.onSurface)));
+        spans.add(WidgetSpan(
+          alignment: PlaceholderAlignment.baseline,
+          baseline: TextBaseline.alphabetic,
+          child: _Spoiler(text: first.group(1) ?? ''),
+        ));
     }
 
     spans.addAll(_spans(context, after));
     return spans;
+  }
+}
+
+class _Spoiler extends StatefulWidget {
+  final String text;
+  const _Spoiler({required this.text});
+
+  @override
+  State<_Spoiler> createState() => _SpoilerState();
+}
+
+class _SpoilerState extends State<_Spoiler> {
+  var _show = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _show = true),
+      onExit: (_) => setState(() => _show = false),
+      child: Container(
+        color: const Color(0xFF23252E),
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Text(
+          widget.text,
+          style: TextStyle(
+            fontSize: 13.5,
+            height: 1.6,
+            color: _show ? _kBody : Colors.transparent,
+          ),
+        ),
+      ),
+    );
   }
 }
