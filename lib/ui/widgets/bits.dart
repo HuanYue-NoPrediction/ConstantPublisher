@@ -42,6 +42,7 @@ class StatusBadge extends StatelessWidget {
 class SectionCard extends StatelessWidget {
   final String title;
   final String? subtitle;
+  final String? hint;
   final Widget child;
   final Widget? trailing;
   final IconData? icon;
@@ -50,6 +51,7 @@ class SectionCard extends StatelessWidget {
     super.key,
     required this.title,
     this.subtitle,
+    this.hint,
     required this.child,
     this.trailing,
     this.icon,
@@ -83,12 +85,32 @@ class SectionCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title,
-                          style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: .1,
-                              height: 1.3)),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(title,
+                                style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: .1,
+                                    height: 1.3)),
+                          ),
+                          if (hint != null) ...[
+                            const SizedBox(width: 6),
+                            Tooltip(
+                              message: hint!,
+                              waitDuration:
+                                  const Duration(milliseconds: 250),
+                              triggerMode: TooltipTriggerMode.tap,
+                              child: Icon(Icons.help_outline,
+                                  size: 14,
+                                  color: scheme.onSurfaceVariant
+                                      .withValues(alpha: .75)),
+                            ),
+                          ],
+                        ],
+                      ),
                       if (subtitle != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 2),

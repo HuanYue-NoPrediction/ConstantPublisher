@@ -122,7 +122,7 @@ class _DashboardPageState extends State<DashboardPage> {
         SectionCard(
           icon: Icons.campaign_outlined,
           title: t.newsTitle,
-          subtitle: t.newsSubtitle,
+          hint: t.newsSubtitle,
           child: state.news.isEmpty
               ? Text(t.newsLoading,
                   style: TextStyle(

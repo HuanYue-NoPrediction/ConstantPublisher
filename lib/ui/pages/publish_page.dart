@@ -917,7 +917,7 @@ class _PublishPageState extends State<PublishPage> {
         SectionCard(
           icon: Icons.storefront_outlined,
           title: t.wsPageTitle,
-          subtitle: t.wsPageSubtitle,
+          hint: t.wsPageSubtitle,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1079,7 +1079,7 @@ class _PublishPageState extends State<PublishPage> {
         SectionCard(
           icon: Icons.history_edu_outlined,
           title: t.noteTitle,
-          subtitle: t.noteSubtitle,
+          hint: t.noteSubtitle,
           child: TextField(
             controller: _noteCtrl,
             onChanged: (_) => _saveDraftSoon(),
@@ -1251,7 +1251,7 @@ class _PublishPageState extends State<PublishPage> {
         SectionCard(
           icon: Icons.image_outlined,
           title: t.previewTitle,
-          subtitle: t.previewSubtitle,
+          hint: t.previewSubtitle,
           trailing: TextButton(
             onPressed: () => _pickPreview(mod),
             child: Text(t.previewChange),
@@ -1365,7 +1365,7 @@ class _PublishPageState extends State<PublishPage> {
         SectionCard(
           icon: Icons.folder_zip_outlined,
           title: t.uploadTitle,
-          subtitle: t.uploadSubtitle,
+          hint: t.uploadSubtitle,
           trailing: IconButton(
             tooltip: t.rescan,
             icon: const Icon(Icons.refresh, size: 18),

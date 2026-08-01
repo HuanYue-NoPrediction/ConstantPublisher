@@ -29,7 +29,7 @@ class SettingsPage extends StatelessWidget {
         SectionCard(
           icon: Icons.bolt_outlined,
           title: t.setEngineTitle,
-          subtitle: t.setEngineSubtitle,
+          hint: t.setEngineSubtitle,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -99,7 +99,7 @@ class SettingsPage extends StatelessWidget {
         SectionCard(
           icon: Icons.travel_explore_outlined,
           title: t.setInspect,
-          subtitle: t.setInspectSubtitle,
+          hint: t.setInspectSubtitle,
           child: Column(
             children: [
               _TextRow(
