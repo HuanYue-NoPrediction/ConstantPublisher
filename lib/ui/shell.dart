@@ -35,31 +35,17 @@ class Shell extends StatelessWidget {
           Expanded(
             child: Row(
               children: [
-                NavigationRail(
-                  selectedIndex: state.navIndex,
-                  onDestinationSelected: state.goto,
-                  labelType: NavigationRailLabelType.all,
-                  destinations: [
-                    NavigationRailDestination(
-                        icon: const Icon(Icons.dashboard_outlined),
-                        selectedIcon: const Icon(Icons.dashboard),
-                        label: Text(t.navDashboard)),
-                    NavigationRailDestination(
-                        icon: const Icon(Icons.public_outlined),
-                        selectedIcon: const Icon(Icons.public),
-                        label: Text(t.navWorkshop)),
-                    NavigationRailDestination(
-                        icon: const Icon(Icons.upload_outlined),
-                        selectedIcon: const Icon(Icons.upload),
-                        label: Text(t.navPublish)),
-                    NavigationRailDestination(
-                        icon: const Icon(Icons.terminal_outlined),
-                        selectedIcon: const Icon(Icons.terminal),
-                        label: Text(t.navLogs)),
-                    NavigationRailDestination(
-                        icon: const Icon(Icons.tune_outlined),
-                        selectedIcon: const Icon(Icons.tune),
-                        label: Text(t.navSettings)),
+                _Rail(
+                  index: state.navIndex,
+                  onSelect: state.goto,
+                  primary: [
+                    (Icons.dashboard_outlined, Icons.dashboard, t.navDashboard),
+                    (Icons.public_outlined, Icons.public, t.navWorkshop),
+                    (Icons.upload_outlined, Icons.upload, t.navPublish),
+                  ],
+                  utility: [
+                    (Icons.terminal_outlined, Icons.terminal, t.navLogs),
+                    (Icons.tune_outlined, Icons.tune, t.navSettings),
                   ],
                 ),
                 const VerticalDivider(width: 1, thickness: 1),
@@ -68,6 +54,109 @@ class Shell extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+typedef _NavItem = (IconData, IconData, String);
+
+class _Rail extends StatelessWidget {
+  final int index;
+  final ValueChanged<int> onSelect;
+  final List<_NavItem> primary;
+  final List<_NavItem> utility;
+
+  const _Rail({
+    required this.index,
+    required this.onSelect,
+    required this.primary,
+    required this.utility,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return SizedBox(
+      width: 84,
+      child: Column(
+        children: [
+          const SizedBox(height: 10),
+          for (var i = 0; i < primary.length; i++)
+            _RailButton(
+              item: primary[i],
+              selected: index == i,
+              onTap: () => onSelect(i),
+            ),
+          const Spacer(),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 22),
+            child: Divider(height: 1, color: scheme.outlineVariant),
+          ),
+          const SizedBox(height: 8),
+          for (var i = 0; i < utility.length; i++)
+            _RailButton(
+              item: utility[i],
+              selected: index == primary.length + i,
+              onTap: () => onSelect(primary.length + i),
+            ),
+          const SizedBox(height: 12),
+        ],
+      ),
+    );
+  }
+}
+
+class _RailButton extends StatelessWidget {
+  final _NavItem item;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _RailButton({
+    required this.item,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final fg = selected ? scheme.onSecondaryContainer : scheme.onSurfaceVariant;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(10, 3, 10, 3),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 7),
+          child: Column(
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
+                curve: Curves.easeOut,
+                width: 46,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: selected
+                      ? scheme.secondaryContainer
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(selected ? item.$2 : item.$1, size: 19, color: fg),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                item.$3,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  height: 1.1,
+                  color: fg,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

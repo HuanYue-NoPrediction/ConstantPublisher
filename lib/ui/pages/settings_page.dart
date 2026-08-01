@@ -123,40 +123,36 @@ class SettingsPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(
-                      width: 130,
-                      child: Padding(
-                          padding: const EdgeInsets.only(top: 6),
-                          child: Text(t.setSeedColor))),
+                    width: 140,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(t.setSeedColor,
+                              style: const TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 2),
+                          Text(_seedName(t, state.seed),
+                              style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: scheme.onSurfaceVariant)),
+                        ],
+                      ),
+                    ),
+                  ),
                   Expanded(
                     child: Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
+                      spacing: 10,
+                      runSpacing: 10,
                       children: [
                         for (final entry in kSeeds.entries)
-                          Tooltip(
-                            message: _seedName(t, entry.key),
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(20),
-                              onTap: () => state.setSeed(entry.key),
-                              child: Container(
-                                width: 32,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  color: entry.value,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: state.seed == entry.key
-                                        ? scheme.primary
-                                        : scheme.outlineVariant,
-                                    width: state.seed == entry.key ? 3 : 1,
-                                  ),
-                                ),
-                                child: state.seed == entry.key
-                                    ? const Icon(Icons.check,
-                                        size: 16, color: Colors.white)
-                                    : null,
-                              ),
-                            ),
+                          _Swatch(
+                            color: entry.value,
+                            name: _seedName(t, entry.key),
+                            selected: state.seed == entry.key,
+                            onTap: () => state.setSeed(entry.key),
                           ),
                       ],
                     ),
@@ -292,6 +288,67 @@ String _seedName(AppLocalizations t, String key) => switch (key) {
       _ => key,
     };
 
+class _Swatch extends StatelessWidget {
+  final Color color;
+  final String name;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _Swatch({
+    required this.color,
+    required this.name,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Tooltip(
+      message: name,
+      waitDuration: const Duration(milliseconds: 400),
+      child: InkResponse(
+        onTap: onTap,
+        radius: 26,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          width: 38,
+          height: 38,
+          padding: const EdgeInsets.all(3.5),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: selected ? color : Colors.transparent,
+              width: 2,
+            ),
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+              border: Border.all(
+                  color: scheme.outlineVariant.withValues(alpha: .6)),
+              boxShadow: selected
+                  ? [
+                      BoxShadow(
+                        color: color.withValues(alpha: .45),
+                        blurRadius: 8,
+                        spreadRadius: 1,
+                      ),
+                    ]
+                  : null,
+            ),
+            child: selected
+                ? const Icon(Icons.check, size: 15, color: Colors.white)
+                : null,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _PathRow extends StatelessWidget {
   final String label;
   final String value;
@@ -304,22 +361,30 @@ class _PathRow extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Row(
       children: [
+        SizedBox(
+          width: 140,
+          child: Text(label,
+              style: const TextStyle(
+                  fontSize: 13.5, fontWeight: FontWeight.w600)),
+        ),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label,
-                  style: const TextStyle(
-                      fontSize: 13.5, fontWeight: FontWeight.w600)),
-              Text(value,
-                  style: TextStyle(
-                      fontSize: 11.5,
-                      fontFamily: 'monospace',
-                      color: scheme.onSurfaceVariant)),
-            ],
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Text(value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontSize: 11.5,
+                    fontFamily: 'monospace',
+                    color: scheme.onSurfaceVariant)),
           ),
         ),
-        TextButton(
+        const SizedBox(width: 10),
+        OutlinedButton(
             onPressed: onPick,
             child: Text(AppLocalizations.of(context).setPick)),
       ],
@@ -360,7 +425,7 @@ class _TextRowState extends State<_TextRow> {
     return Row(
       children: [
         SizedBox(
-            width: 130,
+            width: 140,
             child: Text(widget.label,
                 style: const TextStyle(
                     fontSize: 13.5, fontWeight: FontWeight.w600))),

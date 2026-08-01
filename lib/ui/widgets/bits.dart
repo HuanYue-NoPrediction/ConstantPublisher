@@ -57,32 +57,58 @@ class SectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 15, 18, 13),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Text(title,
-                      style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w600)),
+                Container(
+                  width: 3,
+                  height: subtitle == null ? 15 : 31,
+                  margin: const EdgeInsets.only(top: 2, right: 11),
+                  decoration: BoxDecoration(
+                    color: scheme.primary.withValues(alpha: .85),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-                if (trailing != null) trailing!,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title,
+                          style: const TextStyle(
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: .2,
+                              height: 1.25)),
+                      if (subtitle != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 3),
+                          child: Text(subtitle!,
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  height: 1.35,
+                                  color: scheme.onSurfaceVariant)),
+                        ),
+                    ],
+                  ),
+                ),
+                if (trailing != null) ...[
+                  const SizedBox(width: 10),
+                  trailing!,
+                ],
               ],
             ),
-            if (subtitle != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: Text(subtitle!,
-                    style: TextStyle(
-                        fontSize: 12.5, color: scheme.onSurfaceVariant)),
-              ),
-            const SizedBox(height: 13),
-            child,
-          ],
-        ),
+          ),
+          Divider(height: 1, color: scheme.outlineVariant),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 15, 18, 17),
+            child: child,
+          ),
+        ],
       ),
     );
   }
