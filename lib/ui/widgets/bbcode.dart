@@ -15,6 +15,9 @@ const List<String> _kFonts = [
   'Microsoft YaHei',
 ];
 
+String _edge(String s) =>
+    s.replaceAll(RegExp(r'^[ \t\r\n]+|[ \t\r\n]+$'), '');
+
 class BBCodePreview extends StatelessWidget {
   final String source;
   const BBCodePreview(this.source, {super.key});
@@ -43,7 +46,8 @@ class BBCodePreview extends StatelessWidget {
         final size = level == 'h1' ? 21.0 : (level == 'h2' ? 17.5 : 15.0);
         blocks.add(Padding(
           padding: const EdgeInsets.only(top: 8, bottom: 6),
-          child: Text(m.group(2)!.trim(),
+          child: Text.rich(
+              TextSpan(children: _spans(context, _edge(m.group(2)!))),
               style: TextStyle(
                   fontSize: size,
                   fontWeight: level == 'h3' ? FontWeight.w600 : FontWeight.w500,
@@ -55,7 +59,7 @@ class BBCodePreview extends StatelessWidget {
         final ordered = m.group(3)!.toLowerCase() == 'olist';
         var n = 0;
         for (final item in m.group(4)!.split('[*]')) {
-          final t = item.trim();
+          final t = _edge(item);
           if (t.isEmpty) continue;
           n++;
           blocks.add(Padding(
@@ -111,7 +115,7 @@ class BBCodePreview extends StatelessWidget {
                           fontStyle: FontStyle.italic,
                           color: Color(0xFF8B98A6))),
                 ),
-              _inline(context, m.group(7)!.trim()),
+              _inline(context, _edge(m.group(7)!)),
             ],
           ),
         ));
@@ -149,7 +153,7 @@ class BBCodePreview extends StatelessWidget {
     for (final tr in trRe.allMatches(body)) {
       final cells = [
         for (final c in cellRe.allMatches(tr.group(1)!))
-          (c.group(1)!.toLowerCase(), c.group(2)!.trim())
+          (c.group(1)!.toLowerCase(), _edge(c.group(2)!))
       ];
       if (cells.isEmpty) continue;
       if (cells.length > cols) cols = cells.length;
@@ -170,9 +174,11 @@ class BBCodePreview extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   child: i < cells.length
-                      ? Text(cells[i].$2,
+                      ? Text.rich(
+                          TextSpan(children: _spans(context, cells[i].$2)),
                           style: TextStyle(
                               fontSize: 12.5,
+                              fontFamilyFallback: _kFonts,
                               color: cells[i].$1 == 'th' ? _kWhite : _kBody,
                               fontWeight: cells[i].$1 == 'th'
                                   ? FontWeight.w600
@@ -233,7 +239,7 @@ class BBCodePreview extends StatelessWidget {
   }
 
   Widget _para(BuildContext context, String raw) {
-    final t = raw.trim();
+    final t = _edge(raw);
     if (t.isEmpty) return const SizedBox(height: 6);
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
