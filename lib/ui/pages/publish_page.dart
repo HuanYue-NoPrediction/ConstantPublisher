@@ -285,10 +285,9 @@ class _PublishPageState extends State<PublishPage> {
               kept == 0
                   ? t.planAllIgnored
                   : kept == files.length
-                      ? t.planFolderAll(
-                          '${files.length}', humanSize(keptSize))
-                      : t.planFolderPart('$kept', '${files.length}',
-                          humanSize(keptSize)),
+                      ? t.planFolderAll('${files.length}', humanSize(keptSize))
+                      : t.planFolderPart(
+                          '$kept', '${files.length}', humanSize(keptSize)),
               style: TextStyle(
                   fontSize: 10.5,
                   fontFamily: 'monospace',
@@ -552,8 +551,8 @@ class _PublishPageState extends State<PublishPage> {
                             size: 18, color: scheme.primary),
                         const SizedBox(width: 8),
                         Text(t.targetNew,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w600)),
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w600)),
                       ]),
                       for (final it in state.remoteItems)
                         Row(children: [
@@ -657,9 +656,7 @@ class _PublishPageState extends State<PublishPage> {
                                             fontWeight: FontWeight.w600)),
                                     Text(
                                       t.targetItemSub(
-                                          it.version.isEmpty
-                                              ? '?'
-                                              : it.version,
+                                          it.version.isEmpty ? '?' : it.version,
                                           _fmtCount(it.subs)),
                                       style: TextStyle(
                                           fontSize: 11,
@@ -708,13 +705,15 @@ class _PublishPageState extends State<PublishPage> {
                       runSpacing: 4,
                       children: [
                         for (final (k, label, icon) in [
-                          ('content', t.partContent,
-                              Icons.folder_zip_outlined),
+                          ('content', t.partContent, Icons.folder_zip_outlined),
                           ('text', t.partText, Icons.description_outlined),
                           ('preview', t.partPreview, Icons.image_outlined),
                           ('tags', t.partTags, Icons.sell_outlined),
-                          ('visibility', t.partVisibility,
-                              Icons.visibility_outlined),
+                          (
+                            'visibility',
+                            t.partVisibility,
+                            Icons.visibility_outlined
+                          ),
                         ])
                           FilterChip(
                             avatar: Icon(icon, size: 15),
@@ -832,8 +831,8 @@ class _PublishPageState extends State<PublishPage> {
                   foregroundColor: scheme.error,
                 ),
                 icon: const Icon(Icons.delete_outline, size: 15),
-                label: Text(t.draftDiscard,
-                    style: const TextStyle(fontSize: 12)),
+                label:
+                    Text(t.draftDiscard, style: const TextStyle(fontSize: 12)),
               ),
             ],
           ]),
@@ -994,57 +993,71 @@ class _PublishPageState extends State<PublishPage> {
                             color: scheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                            children: [
-                              _bbIcon(Icons.format_bold, t.bbBold, '[b]',
-                                  '[/b]'),
-                              _bbIcon(Icons.format_italic, t.bbItalic, '[i]',
-                                  '[/i]'),
-                              _bbIcon(Icons.format_underlined, t.bbUnderline,
-                                  '[u]', '[/u]'),
-                              _bbIcon(Icons.strikethrough_s, t.bbStrike,
-                                  '[strike]', '[/strike]'),
-                              _bbDiv(),
-                              _bbTxt('H1', t.bbH1, '[h1]', '[/h1]'),
-                              _bbTxt('H2', t.bbH2, '[h2]', '[/h2]'),
-                              _bbTxt('H3', t.bbH3, '[h3]', '[/h3]'),
-                              _bbDiv(),
-                              _bbIcon(Icons.format_list_bulleted, t.bbList,
-                                  '[list]\n[*]', '\n[/list]'),
-                              _bbIcon(Icons.format_list_numbered, t.bbOlist,
-                                  '[olist]\n[*]', '\n[/olist]'),
-                              _bbDiv(),
-                              _bbIcon(Icons.link, t.bbLink, '[url=https://]',
-                                  '[/url]'),
-                              _bbIcon(Icons.image_outlined, t.bbImage,
-                                  '[img]', '[/img]'),
-                              _bbIcon(
-                                  Icons.smart_display_outlined,
-                                  t.bbVideo,
-                                  '[previewyoutube=',
-                                  ';full][/previewyoutube]'),
-                              _bbDiv(),
-                              _bbIcon(Icons.format_quote, t.bbQuote,
-                                  '[quote=${t.bbQuoteAuthor}]', '[/quote]'),
-                              _bbIcon(Icons.code, t.bbCode, '[code]',
-                                  '[/code]'),
-                              _bbIcon(
-                                  Icons.table_chart_outlined,
-                                  t.bbTable,
-                                  '[table]\n[tr][th]${t.bbTableHeader}[/th][th]${t.bbTableHeader}[/th][/tr]\n'
-                                      '[tr][td]${t.bbTableCell}[/td][td]${t.bbTableCell}[/td][/tr]\n[/table]',
-                                  ''),
-                              _bbDiv(),
-                              _bbIcon(Icons.visibility_off_outlined,
-                                  t.bbSpoiler, '[spoiler]', '[/spoiler]'),
-                              _bbIcon(Icons.format_clear, t.bbNoparse,
-                                  '[noparse]', '[/noparse]'),
-                              _bbIcon(Icons.horizontal_rule, t.bbHr,
-                                  '[hr][/hr]\n', ''),
-                            ],
-                          ),
+                          child: LayoutBuilder(
+                            builder: (context, box) => SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: ConstrainedBox(
+                                constraints:
+                                    BoxConstraints(minWidth: box.maxWidth),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    _bbIcon(Icons.format_bold, t.bbBold, '[b]',
+                                        '[/b]'),
+                                    _bbIcon(Icons.format_italic, t.bbItalic,
+                                        '[i]', '[/i]'),
+                                    _bbIcon(Icons.format_underlined,
+                                        t.bbUnderline, '[u]', '[/u]'),
+                                    _bbIcon(Icons.strikethrough_s, t.bbStrike,
+                                        '[strike]', '[/strike]'),
+                                    _bbDiv(),
+                                    _bbTxt('H1', t.bbH1, '[h1]', '[/h1]'),
+                                    _bbTxt('H2', t.bbH2, '[h2]', '[/h2]'),
+                                    _bbTxt('H3', t.bbH3, '[h3]', '[/h3]'),
+                                    _bbDiv(),
+                                    _bbIcon(Icons.format_list_bulleted,
+                                        t.bbList, '[list]\n[*]', '\n[/list]'),
+                                    _bbIcon(
+                                        Icons.format_list_numbered,
+                                        t.bbOlist,
+                                        '[olist]\n[*]',
+                                        '\n[/olist]'),
+                                    _bbDiv(),
+                                    _bbIcon(Icons.link, t.bbLink,
+                                        '[url=https://]', '[/url]'),
+                                    _bbIcon(Icons.image_outlined, t.bbImage,
+                                        '[img]', '[/img]'),
+                                    _bbIcon(
+                                        Icons.smart_display_outlined,
+                                        t.bbVideo,
+                                        '[previewyoutube=',
+                                        ';full][/previewyoutube]'),
+                                    _bbDiv(),
+                                    _bbIcon(
+                                        Icons.format_quote,
+                                        t.bbQuote,
+                                        '[quote=${t.bbQuoteAuthor}]',
+                                        '[/quote]'),
+                                    _bbIcon(Icons.code, t.bbCode, '[code]',
+                                        '[/code]'),
+                                    _bbIcon(
+                                        Icons.table_chart_outlined,
+                                        t.bbTable,
+                                        '[table]\n[tr][th]${t.bbTableHeader}[/th][th]${t.bbTableHeader}[/th][/tr]\n'
+                                            '[tr][td]${t.bbTableCell}[/td][td]${t.bbTableCell}[/td][/tr]\n[/table]',
+                                        ''),
+                                    _bbDiv(),
+                                    _bbIcon(Icons.visibility_off_outlined,
+                                        t.bbSpoiler, '[spoiler]', '[/spoiler]'),
+                                    _bbIcon(Icons.format_clear, t.bbNoparse,
+                                        '[noparse]', '[/noparse]'),
+                                    _bbIcon(Icons.horizontal_rule, t.bbHr,
+                                        '[hr][/hr]\n', ''),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -1287,8 +1300,7 @@ class _PublishPageState extends State<PublishPage> {
             }
 
             if (pv == null) {
-              slots.add(slot(
-                  placeholder(Icons.image_not_supported_outlined),
+              slots.add(slot(placeholder(Icons.image_not_supported_outlined),
                   t.previewLocalMissing));
               return Row(children: [
                 ...slots,
@@ -1439,12 +1451,9 @@ class _PublishPageState extends State<PublishPage> {
                         if (ok) {
                           await DraftStore.clear(mod.path, targetId);
                           if (mounted) {
-                            setState(() =>
-                                _draftStamp = t.pubDraftCleared);
-                            toast(
-                                context,
-                                t.publishedToast(
-                                    mod.info.name, _verCtrl.text));
+                            setState(() => _draftStamp = t.pubDraftCleared);
+                            toast(context,
+                                t.publishedToast(mod.info.name, _verCtrl.text));
                           }
                         }
                       },
