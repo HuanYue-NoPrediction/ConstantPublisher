@@ -159,6 +159,39 @@ class BBCodePreview extends StatelessWidget {
     );
   }
 
+  Widget _netImage(BuildContext context, String url) {
+    if (!url.startsWith('http')) {
+      return _placeholder(
+          context, AppLocalizations.of(context).bbPrevImage(url));
+    }
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: 260),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: Image.network(
+            url,
+            fit: BoxFit.contain,
+            alignment: Alignment.centerLeft,
+            loadingBuilder: (c, child, prog) => prog == null
+                ? child
+                : Container(
+                    width: 120,
+                    height: 60,
+                    color: scheme.surfaceContainerHighest,
+                    child: Icon(Icons.image_outlined,
+                        size: 20, color: scheme.onSurfaceVariant),
+                  ),
+            errorBuilder: (_, __, ___) => _placeholder(context,
+                AppLocalizations.of(context).bbPrevImage(url)),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _placeholder(BuildContext context, String label) {
     final scheme = Theme.of(context).colorScheme;
     return Container(
@@ -242,16 +275,14 @@ class BBCodePreview extends StatelessWidget {
             children: _spans(context, first.group(1) ?? '')));
       case 'url':
         spans.add(TextSpan(
-            text: first.group(2) ?? '',
             style: TextStyle(
                 color: scheme.primary,
-                decoration: TextDecoration.underline)));
+                decoration: TextDecoration.underline,
+                decorationColor: scheme.primary),
+            children: _spans(context, first.group(2) ?? '')));
       case 'img':
         spans.add(WidgetSpan(
-          child: _placeholder(
-              context,
-              AppLocalizations.of(context)
-                  .bbPrevImage('${first.group(1)}')),
+          child: _netImage(context, (first.group(1) ?? '').trim()),
         ));
       case 'spoiler':
         spans.add(TextSpan(

@@ -716,11 +716,36 @@ class _PublishPageState extends State<PublishPage> {
                           ),
                         ])
                           FilterChip(
-                            avatar: Icon(icon, size: 15),
+                            avatar: Icon(
+                              _parts.contains(k)
+                                  ? Icons.check_circle
+                                  : icon,
+                              size: 15,
+                              color: _parts.contains(k)
+                                  ? scheme.onPrimary
+                                  : scheme.onSurfaceVariant
+                                      .withValues(alpha: .55),
+                            ),
                             label: Text(label,
-                                style: const TextStyle(fontSize: 12)),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: _parts.contains(k)
+                                      ? FontWeight.w600
+                                      : FontWeight.w400,
+                                  color: _parts.contains(k)
+                                      ? scheme.onPrimary
+                                      : scheme.onSurfaceVariant
+                                          .withValues(alpha: .65),
+                                )),
                             selected: _parts.contains(k),
                             showCheckmark: false,
+                            selectedColor: scheme.primary,
+                            backgroundColor: Colors.transparent,
+                            side: BorderSide(
+                              color: _parts.contains(k)
+                                  ? scheme.primary
+                                  : scheme.outlineVariant,
+                            ),
                             visualDensity: VisualDensity.compact,
                             materialTapTargetSize:
                                 MaterialTapTargetSize.shrinkWrap,
