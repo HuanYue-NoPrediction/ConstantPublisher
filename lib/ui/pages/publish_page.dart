@@ -45,11 +45,11 @@ const _categories = {
   'other',
   'pet',
   'scenario',
-  'server_admin',
   'tutorial',
   'tweak',
   'utility',
   'worldgen',
+  'server_admin',
 };
 
 class _PublishPageState extends State<PublishPage> {
@@ -910,6 +910,7 @@ class _PublishPageState extends State<PublishPage> {
     final categories = mod.pub.appId == 322330 ? _categories : const <String>{};
     String normalize(String tag) => tag.trim().toLowerCase();
     final selected = _tags.map(normalize).toSet();
+    final count = categories.intersection(selected).length;
     final custom = _tags.where((tag) => !categories.contains(normalize(tag)));
     return Column(
       children: [
@@ -1162,19 +1163,35 @@ class _PublishPageState extends State<PublishPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (categories.isNotEmpty) ...[
-                Text(t.categories, style: Theme.of(context).textTheme.labelLarge),
-                const SizedBox(height: 4),
-                Wrap(
-                  spacing: 7,
-                  runSpacing: 4,
-                  children: [
+                MenuAnchor(
+                  style: const MenuStyle(
+                    maximumSize: WidgetStatePropertyAll(Size(280, 320)),
+                  ),
+                  builder: (context, controller, child) => OutlinedButton(
+                    onPressed: () {
+                      if (controller.isOpen) {
+                        controller.close();
+                      } else {
+                        controller.open();
+                      }
+                    },
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('${t.categories} · $count'),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.arrow_drop_down, size: 20),
+                      ],
+                    ),
+                  ),
+                  menuChildren: [
                     for (final category in categories)
-                      FilterChip(
-                        label: Text(category),
-                        selected: selected.contains(category),
-                        onSelected: (checked) {
+                      CheckboxMenuButton(
+                        value: selected.contains(category),
+                        closeOnActivate: false,
+                        onChanged: (checked) {
                           setState(() {
-                            if (checked) {
+                            if (checked == true) {
                               _tags.add(category);
                             } else {
                               _tags.removeWhere(
@@ -1184,6 +1201,7 @@ class _PublishPageState extends State<PublishPage> {
                           });
                           _saveDraftSoon();
                         },
+                        child: Text(category),
                       ),
                   ],
                 ),
