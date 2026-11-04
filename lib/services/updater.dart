@@ -50,6 +50,72 @@ String _updateAsset() => Platform.isMacOS
     ? 'DSTModPublisher-macos.zip'
     : 'DSTModPublisher-windows.zip';
 
+Future<void> _configure(HttpClient client, Uri uri) async {
+  final environment = Platform.environment;
+  final key = '${uri.scheme}_proxy';
+  client.findProxy = HttpClient.findProxyFromEnvironment;
+  if ((environment[key] ?? environment[key.toUpperCase()] ?? '').isNotEmpty) {
+    return;
+  }
+  try {
+    final process = await Process.start(
+      p.join(environment['SystemRoot'] ?? r'C:\Windows', 'System32',
+          'WindowsPowerShell', 'v1.0', 'powershell.exe'),
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        r'''
+$url = [Uri]$env:DST_UPDATE_PROXY_URL
+$proxy = [System.Net.WebRequest]::GetSystemWebProxy().GetProxy($url)
+if ($proxy -and $proxy -ne $url -and $proxy.Scheme -eq 'http') {
+  '{0}:{1}' -f $proxy.Host, $proxy.Port
+}
+''',
+      ],
+      environment: {'DST_UPDATE_PROXY_URL': uri.toString()},
+    );
+    final output = process.stdout.transform(systemEncoding.decoder).join();
+    final errors = process.stderr.drain<void>();
+    final code = await process.exitCode.timeout(
+      const Duration(seconds: 8),
+      onTimeout: () {
+        process.kill();
+        return -1;
+      },
+    );
+    final proxy = (await output).trim();
+    await errors;
+    if (code == 0 && proxy.isNotEmpty) {
+      final settings = {...environment, key: proxy};
+      client.findProxy = (url) =>
+          HttpClient.findProxyFromEnvironment(url, environment: settings);
+    }
+  } catch (_) {}
+}
+
+Future<HttpClientResponse> _get(
+  HttpClient client,
+  String url, {
+  Duration? timeout,
+}) async {
+  var uri = Uri.parse(url);
+  for (var redirects = 0; redirects <= 5; redirects++) {
+    if (Platform.isWindows) await _configure(client, uri);
+    final request = await client.getUrl(uri);
+    request.followRedirects = !Platform.isWindows;
+    request.headers.set('User-Agent', 'dst-mod-publisher');
+    final pending = request.close();
+    final response = await (timeout == null ? pending : pending.timeout(timeout));
+    if (!Platform.isWindows || !response.isRedirect) return response;
+    final location = response.headers.value(HttpHeaders.locationHeader);
+    if (location == null) return response;
+    await response.drain<void>();
+    uri = uri.resolve(location);
+  }
+  throw HttpException('Too many redirects', uri: uri);
+}
+
 Future<UpdateInfo?> checkGithubUpdate() async {
   return await _checkGithubAsset() ?? await _checkGithubApi();
 }
@@ -58,10 +124,11 @@ Future<UpdateInfo?> _checkGithubAsset() async {
   final client = HttpClient()
     ..connectionTimeout = const Duration(seconds: 8);
   try {
-    final req = await client.getUrl(Uri.parse(
-        'https://github.com/$_kRepo/releases/latest/download/version.txt'));
-    req.headers.set('User-Agent', 'dst-mod-publisher');
-    final res = await req.close().timeout(const Duration(seconds: 10));
+    final res = await _get(
+      client,
+      'https://github.com/$_kRepo/releases/latest/download/version.txt',
+      timeout: const Duration(seconds: 10),
+    );
     if (res.statusCode != 200) return null;
     final v = (await res.transform(utf8.decoder).join()).trim();
     if (v.isEmpty || cmpVer(v, kAppVersion) <= 0) return null;
@@ -81,10 +148,11 @@ Future<UpdateInfo?> _checkGithubApi() async {
   final client = HttpClient()
     ..connectionTimeout = const Duration(seconds: 8);
   try {
-    final req = await client.getUrl(Uri.parse(
-        'https://api.github.com/repos/$_kRepo/releases/latest'));
-    req.headers.set('User-Agent', 'dst-mod-publisher');
-    final res = await req.close().timeout(const Duration(seconds: 10));
+    final res = await _get(
+      client,
+      'https://api.github.com/repos/$_kRepo/releases/latest',
+      timeout: const Duration(seconds: 10),
+    );
     if (res.statusCode != 200) return null;
     final j =
         jsonDecode(await res.transform(utf8.decoder).join())
@@ -113,9 +181,7 @@ Future<String?> downloadZip(String url,
   final client = HttpClient()
     ..connectionTimeout = const Duration(seconds: 10);
   try {
-    final req = await client.getUrl(Uri.parse(url));
-    req.headers.set('User-Agent', 'dst-mod-publisher');
-    final res = await req.close();
+    final res = await _get(client, url);
     if (res.statusCode != 200) return null;
     final out = File(p.join(
         Directory.systemTemp.path, 'dst_mod_publisher_update', 'update.zip'));
