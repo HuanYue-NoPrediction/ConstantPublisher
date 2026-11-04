@@ -167,6 +167,7 @@
   "visFriends": "Friends",
   "visPrivate": "Private",
   "tagsTitle": "Tags",
+  "categories": "Workshop categories",
   "tagsHint": "Type a tag and press Enter",
   "imgGroupLabel": "Images",
   "previewUpdated": "Preview image updated to {name}",

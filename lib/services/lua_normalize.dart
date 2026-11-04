@@ -58,6 +58,7 @@ Map<String, String> splitTopLevelAssignments(String src) {
   final out = <String, String>{};
   final bounds = <int>[];
   final names = <String>[];
+  final assignment = RegExp(r'\s*=(?!=)');
   var depth = 0;
   var i = 0;
   final n = src.length;
@@ -104,14 +105,8 @@ Map<String, String> splitTopLevelAssignments(String src) {
         j++;
       }
       final word = src.substring(i, j);
-      var k = j;
-      while (k < n && (src[k] == ' ' || src[k] == '\t')) {
-        k++;
-      }
-      if (k < n &&
-          src[k] == '=' &&
-          (k + 1 >= n || src[k + 1] != '=') &&
-          !_luaKeywords.contains(word)) {
+      if (!_luaKeywords.contains(word) &&
+          assignment.matchAsPrefix(src, j) != null) {
         bounds.add(i);
         names.add(word);
       }

@@ -34,6 +34,24 @@ const Map<String, String> kSteamLangs = {
   'russian': 'Русский',
 };
 
+const _categories = {
+  'art',
+  'character',
+  'creature',
+  'environment',
+  'interface',
+  'item',
+  'language',
+  'other',
+  'pet',
+  'scenario',
+  'server_admin',
+  'tutorial',
+  'tweak',
+  'utility',
+  'worldgen',
+};
+
 class _PublishPageState extends State<PublishPage> {
   final _verCtrl = TextEditingController();
   final _titleCtrl = TextEditingController();
@@ -889,6 +907,10 @@ class _PublishPageState extends State<PublishPage> {
     final sem = SemanticColors.of(context);
     final t = AppLocalizations.of(context);
     final bumpBase = wsVersion.isEmpty ? null : wsVersion;
+    final categories = mod.pub.appId == 322330 ? _categories : const <String>{};
+    String normalize(String tag) => tag.trim().toLowerCase();
+    final selected = _tags.map(normalize).toSet();
+    final custom = _tags.where((tag) => !categories.contains(normalize(tag)));
     return Column(
       children: [
         SectionCard(
@@ -1139,21 +1161,51 @@ class _PublishPageState extends State<PublishPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Wrap(
-                spacing: 7,
-                runSpacing: 7,
-                children: [
-                  for (final t in _tags)
-                    InputChip(
-                      label: Text(t),
-                      onDeleted: () {
-                        setState(() => _tags.remove(t));
-                        _saveDraftSoon();
-                      },
-                    ),
-                ],
-              ),
-              const SizedBox(height: 8),
+              if (categories.isNotEmpty) ...[
+                Text(t.categories, style: Theme.of(context).textTheme.labelLarge),
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 7,
+                  runSpacing: 4,
+                  children: [
+                    for (final category in categories)
+                      FilterChip(
+                        label: Text(category),
+                        selected: selected.contains(category),
+                        onSelected: (checked) {
+                          setState(() {
+                            if (checked) {
+                              _tags.add(category);
+                            } else {
+                              _tags.removeWhere(
+                                (tag) => normalize(tag) == category,
+                              );
+                            }
+                          });
+                          _saveDraftSoon();
+                        },
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
+              if (custom.isNotEmpty) ...[
+                Wrap(
+                  spacing: 7,
+                  runSpacing: 7,
+                  children: [
+                    for (final tag in custom)
+                      InputChip(
+                        label: Text(tag),
+                        onDeleted: () {
+                          setState(() => _tags.remove(tag));
+                          _saveDraftSoon();
+                        },
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
               TextField(
                 controller: _tagCtrl,
                 decoration: InputDecoration(
@@ -1161,9 +1213,14 @@ class _PublishPageState extends State<PublishPage> {
                     isDense: true,
                     hintText: t.tagsHint),
                 onSubmitted: (v) {
-                  final t = v.trim();
-                  if (t.isNotEmpty && !_tags.contains(t)) {
-                    setState(() => _tags.add(t));
+                  final key = normalize(v);
+                  final preset = categories.contains(key);
+                  final tag = preset ? key : v.trim();
+                  final exists = preset
+                      ? _tags.any((value) => normalize(value) == key)
+                      : _tags.contains(tag);
+                  if (tag.isNotEmpty && !exists) {
+                    setState(() => _tags.add(tag));
                     _saveDraftSoon();
                   }
                   _tagCtrl.clear();

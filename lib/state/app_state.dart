@@ -441,8 +441,12 @@ class AppState extends ChangeNotifier {
       // 标签 = 类型标签(modinfo 派生)+ 发布页里的用户标签;
       // version: 由 helper 注入。UI 已从远端种子标签,故不再并入远端
       // ——否则用户删掉的标签会在发布时复活
-      final tagSet = <String>{mod.info.typeTag, ...tags};
-      tagSet.removeWhere((t) => t.startsWith('version:'));
+      final editable = tags.where(
+        (tag) =>
+            !ModInfo.types.contains(tag.trim().toLowerCase()) &&
+            !tag.startsWith('version:'),
+      );
+      final tagSet = <String>{mod.info.typeTag, ...editable};
 
       final primary = languages.isNotEmpty
           ? languages.first
@@ -490,7 +494,7 @@ class AppState extends ChangeNotifier {
           (newId != null && newId.isNotEmpty) ? newId : targetId;
       // 只持久化内容设置(可见性/标签);发布目标是会话态,不写入文件夹
       mod.pub.visibility = visibility;
-      mod.pub.tags = List.of(tags); // 类型/版本标签每次发布自动生成,不落盘
+      mod.pub.tags = editable.toList();
       await mod.savePub();
       publishTargetId = resultId; // 会话内:新建后再次发布即更新该条目
       if (resultId != null) _itemLangsCache.remove(resultId); // 简介已变,缓存失效

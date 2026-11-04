@@ -4,9 +4,15 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 import '../services/lua_modinfo.dart';
+import '../services/lua_normalize.dart';
 
 /// modinfo.lua 里解析出的字段(只读,真相源是文件本身)。
 class ModInfo {
+  static const _client = 'client_only_mod';
+  static const _server = 'server_only_mod';
+  static const _everyone = 'all_clients_require_mod';
+  static const types = {_client, _server, _everyone};
+
   final String name;
   final String author;
   final String version;
@@ -42,10 +48,10 @@ class ModInfo {
 
   /// DST 类型标签:官方工具据 modinfo 布尔位生成,决定 mod 需装在客户端还是服务器。
   String get typeTag => clientOnly
-      ? 'client_only_mod'
+      ? _client
       : serverOnly
-          ? 'server_only_mod'
-          : 'all_clients_require_mod';
+          ? _server
+          : _everyone;
 
   /// 宽松解析:取 `key =` 之后的第一个字符串字面量,
   /// 兼容饥荒标准双语写法 `key = chinese and "中文" or "English"`
@@ -68,8 +74,9 @@ class ModInfo {
       return num?.group(1) ?? '';
     }
 
-    bool flag(String key) =>
-        RegExp('$key\\s*=\\s*true', caseSensitive: false).hasMatch(lua);
+    final assignments = splitTopLevelAssignments(lua);
+    final enabled = RegExp(r'^\w+\s*=\s*true\b');
+    bool flag(String key) => enabled.hasMatch(assignments[key] ?? '');
 
     return ModInfo(
       name: field('name'),
@@ -77,8 +84,8 @@ class ModInfo {
       version: field('version'),
       description: field('description'),
       apiVersion: field('api_version'),
-      clientOnly: flag('client_only_mod'),
-      serverOnly: flag('server_only_mod'),
+      clientOnly: flag(_client),
+      serverOnly: flag(_server),
     );
   }
 }
