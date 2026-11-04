@@ -58,6 +58,7 @@ class _PublishPageState extends State<PublishPage> {
   final _descCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
   final _tagCtrl = TextEditingController();
+  final _focus = FocusNode();
 
   int _visibility = 0;
   List<String> _tags = [];
@@ -96,6 +97,7 @@ class _PublishPageState extends State<PublishPage> {
     _descCtrl.dispose();
     _noteCtrl.dispose();
     _tagCtrl.dispose();
+    _focus.dispose();
     super.dispose();
   }
 
@@ -1163,47 +1165,75 @@ class _PublishPageState extends State<PublishPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (categories.isNotEmpty) ...[
-                MenuAnchor(
-                  style: const MenuStyle(
-                    maximumSize: WidgetStatePropertyAll(Size(280, 320)),
-                  ),
-                  builder: (context, controller, child) => OutlinedButton(
-                    onPressed: () {
-                      if (controller.isOpen) {
-                        controller.close();
-                      } else {
-                        controller.open();
-                      }
-                    },
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('${t.categories} · $count'),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.arrow_drop_down, size: 20),
-                      ],
-                    ),
-                  ),
-                  menuChildren: [
-                    for (final category in categories)
-                      CheckboxMenuButton(
-                        value: selected.contains(category),
-                        closeOnActivate: false,
-                        onChanged: (checked) {
-                          setState(() {
-                            if (checked == true) {
-                              _tags.add(category);
-                            } else {
-                              _tags.removeWhere(
-                                (tag) => normalize(tag) == category,
-                              );
-                            }
-                          });
-                          _saveDraftSoon();
-                        },
-                        child: Text(category),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final width = constraints.constrainWidth(220);
+                    return MenuAnchor(
+                      childFocusNode: _focus,
+                      crossAxisUnconstrained: false,
+                      style: MenuStyle(
+                        fixedSize: WidgetStatePropertyAll(Size.fromWidth(width)),
+                        maximumSize: const WidgetStatePropertyAll(
+                          Size(double.infinity, 320),
+                        ),
                       ),
-                  ],
+                      builder: (context, controller, child) => SizedBox(
+                        width: width,
+                        child: OutlinedButton(
+                          focusNode: _focus,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                          ),
+                          onPressed: () {
+                            if (controller.isOpen) {
+                              controller.close();
+                            } else {
+                              controller.open();
+                            }
+                          },
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '${t.categories} · $count',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              AnimatedRotation(
+                                turns: controller.isOpen ? .5 : 0,
+                                duration: const Duration(milliseconds: 150),
+                                child: const Icon(
+                                  Icons.arrow_drop_down,
+                                  size: 20,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      menuChildren: [
+                        for (final category in categories)
+                          CheckboxMenuButton(
+                            value: selected.contains(category),
+                            closeOnActivate: false,
+                            onChanged: (checked) {
+                              setState(() {
+                                if (checked == true) {
+                                  _tags.add(category);
+                                } else {
+                                  _tags.removeWhere(
+                                    (tag) => normalize(tag) == category,
+                                  );
+                                }
+                              });
+                              _saveDraftSoon();
+                            },
+                            child: Text(category),
+                          ),
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 8),
               ],
