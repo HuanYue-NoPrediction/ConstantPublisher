@@ -9,6 +9,7 @@
     <!-- 单文件自包含:最终用户无需安装 .NET 运行时。
          默认 win-x64;跨平台构建时用 CLI 的 -r 覆盖(如 -r osx-arm64) -->
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <ApplicationIcon Condition="$(RuntimeIdentifier.StartsWith('win'))">../windows/runner/resources/app_icon.ico</ApplicationIcon>
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>

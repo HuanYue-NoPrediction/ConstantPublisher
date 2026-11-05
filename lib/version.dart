@@ -1,1 +1,1 @@
-const kAppVersion = '0.3.28';
+const kAppVersion = '0.3.29';
